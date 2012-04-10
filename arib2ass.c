@@ -593,10 +593,11 @@ int main(int i_argc, char* pa_argv[])
 			{
 				p_stream->pid[i_pid].b_seen = VLC_TRUE;
 				p_stream->pid[i_pid].i_cc = 0xff;
-				p_stream->pid[i_pid].p_block = calloc(1,sizeof(block_t));
-				p_stream->pid[i_pid].decoder = calloc(1,sizeof(decoder_t));
-				dec_open(p_stream->pid[i_pid].decoder);
-
+				if (p_stream->pid[i_pid].p_es) {
+					p_stream->pid[i_pid].p_block = calloc(1,sizeof(block_t));
+					p_stream->pid[i_pid].decoder = calloc(1,sizeof(decoder_t));
+					dec_open(p_stream->pid[i_pid].decoder);
+				}
 			}
 
 			/* Handle discontinuities if they occurred,
