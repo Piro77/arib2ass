@@ -3,6 +3,18 @@
 
 #include "config.h"
 
+#include <stdlib.h>
+
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
+#if defined(HAVE_INTTYPES_H)
+#include <inttypes.h>
+#elif defined(HAVE_STDINT_H)
+#include <stdint.h>
+#endif
+
 #if defined(HAVE_STRINGS_H)
 #include <string.h>
 #endif
