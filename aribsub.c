@@ -81,6 +81,7 @@ static void parse_caption_management_data( decoder_t * );
 static void parse_caption_statement_data( decoder_t * );
 static void parse_data_group( decoder_t * );
 static void parse_arib_pes( decoder_t * );
+static void dumpregion(arib_buf_region_t *,mtime_t,mtime_t);
 static void dumparib(decoder_t *,mtime_t);
 
 static void *Decode( void *dec, block_t **pp_block )
@@ -995,49 +996,47 @@ static void parse_arib_pes( decoder_t *p_dec )
 }
 
 
+static void dumpregion(arib_buf_region_t *p_region,mtime_t i_start,mtime_t i_stop)
+{
+	char *p1,*p2;
+	p1 = dumpts(i_start);
+	p2 = dumpts(i_stop);
+	for(arib_buf_region_t *p_buf_region = p_region;p_buf_region;p_buf_region = p_buf_region->p_next) {
+		int i_size = p_buf_region->p_end - p_buf_region->p_start;
+		char tmp[512];
+		strncpy(tmp,p_buf_region->p_start,i_size);
+		tmp[i_size]=0;
+		printf("%s %s %d %d [%s]\n",p1,p2,
+			p_buf_region->i_charleft,p_buf_region->i_charbottom,
+			tmp);
+	}
+	free(p1);
+	free(p2);
+}
 static void dumparib(decoder_t *p_dec,mtime_t i_pts)
 {
         decoder_sys_t *p_sys = p_dec->p_sys;
 	int retlen;
 	char *tostr;
 	mtime_t i_stop;
+	static mtime_t i_prev_pts;
+	static arib_decoder_t *prev_decoder=NULL;
+
 	tostr = malloc((p_sys->i_subtitle_data_size*3)+1);
 	tostr[0]=0;
-        arib_decoder_t decoder;
-        arib_initialize_decoder(&decoder,1);
-        retlen = arib_decode_buffer( &decoder,
+        arib_initialize_decoder(&p_sys->arib_decoder,1);
+        retlen = arib_decode_buffer( &p_sys->arib_decoder,
                                                p_sys->psz_subtitle_data,
                                                p_sys->i_subtitle_data_size,
                                                tostr,
                                                p_sys->i_subtitle_data_size*3 );
         if (retlen > 0) tostr[retlen]=0;
-	i_stop = i_pts + (int64_t)(decoder.i_control_time * 1000 * 90 );
-/*
-    p_spu->i_start = p_block->i_pts;
-    p_spu->i_stop = p_block->i_pts + (int64_t)
-        (p_sys->arib_decoder.i_control_time * 1000 * 90 );
-    p_spu->b_ephemer  = (p_spu->i_start == p_spu->i_stop);
-*/
+	i_stop = i_pts + (int64_t)(p_sys->arib_decoder.i_control_time * 1000 * 90 );
 
-	for(arib_buf_region_t *p_buf_region = decoder.p_region;p_buf_region;p_buf_region = p_buf_region->p_next) {
-		int i_size = p_buf_region->p_end - p_buf_region->p_start;
-		char tmp[512];
-		strncpy(tmp,p_buf_region->p_start,i_size);
-		tmp[i_size]=0;
-/*
-		printf("plane %d %d int %d %d font %d %d\n",
-			p_buf_region->i_planewidth,p_buf_region->i_planeheight,
-			p_buf_region->i_horint,p_buf_region->i_verint,
-			p_buf_region->i_fontwidth,p_buf_region->i_fontheight
-			);
-*/
+	dumpregion(p_sys->arib_decoder.p_region,i_pts,i_stop);
+	arib_finalize_decoder(&p_sys->arib_decoder);
 
-		printf("%s %s %d %d [%s]\n",dumpts(i_pts),dumpts(i_stop),
-			p_buf_region->i_charleft,p_buf_region->i_charbottom,
-			tmp);
-	}
        if (tostr) free(tostr);
-	arib_finalize_decoder(&decoder);
 
 }
 
