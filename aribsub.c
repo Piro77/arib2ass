@@ -37,6 +37,8 @@
 
 #include "png.h"
 
+#define	ARIBSUB_GEN_DRCS_DATA	1
+
 #include "aribb24dec.h"
 
 #define DEBUG_ARIBSUB 1
@@ -121,7 +123,8 @@ void *dec_open(void *p_this)
     p_sys->i_drcs_num = 0;
 
     p_sys->p_drcs_conv = NULL;
-    //load_drcs_conversion_table( p_dec );
+
+    load_drcs_conversion_table( p_dec );
 
 }
 #if 0
@@ -234,18 +237,13 @@ static subpicture_t *Decode( decoder_t *p_dec, block_t **pp_block )
 static char* get_arib_base_dir( decoder_t *p_dec )
 {
     VLC_UNUSED(p_dec);
-    char *psz_data_dir = ".";
-    if( psz_data_dir == NULL )
-    {
-        return NULL;
-    }
 
     char *psz_arib_base_dir;
-    if( asprintf( &psz_arib_base_dir, "%s"DIR_SEP"arib", psz_data_dir ) < 0 )
+    //current directory
+    if( asprintf( &psz_arib_base_dir, "%s", "." ) < 0 )
     {
         psz_arib_base_dir = NULL;
     }
-    free( psz_data_dir );
 
     return psz_arib_base_dir;
 }
@@ -317,7 +315,7 @@ static void load_drcs_conversion_table( decoder_t *p_dec )
     p_sys->p_drcs_conv = NULL;
 
     create_arib_basedir( p_dec );
-    return ;
+
     char *psz_arib_base_dir = get_arib_base_dir( p_dec );
     if( psz_arib_base_dir == NULL )
     {
@@ -399,6 +397,7 @@ static void load_drcs_conversion_table( decoder_t *p_dec )
     }
 
     fclose( fp );
+
 }
 
 static FILE* open_image_file( decoder_t* p_dec, const char *psz_hash )
@@ -458,7 +457,6 @@ static void save_drcs_pattern_data_image(
         int i_width, int i_height,
         int i_depth, const int8_t* p_patternData )
 {
-    return ;
     FILE *fp = open_image_file( p_dec, psz_hash );
     if( fp == NULL )
     {
@@ -557,10 +555,30 @@ static void save_drcs_pattern(
         int i_depth, const int8_t* p_patternData )
 {
     decoder_sys_t *p_sys = p_dec->p_sys;
+    drcs_conversion_t *p_drcs_conv;
 
     char* psz_hash = get_drcs_pattern_data_hash( p_dec,
             i_width, i_height, i_depth, p_patternData );
 
+    // has convert table?
+    p_drcs_conv = p_sys->p_drcs_conv;
+    while( p_drcs_conv != NULL && p_drcs_conv->hash) 
+    {
+        if (strcmp( p_drcs_conv->hash,psz_hash) == 0 )
+        {
+            free(psz_hash);
+            return;
+        }
+        p_drcs_conv = p_drcs_conv->p_next;
+    }
+    // already saved?
+    for(int i=0;i<10;i++) {
+       if (strcmp(p_sys->drcs_hash_table[i],psz_hash) == 0)
+       {
+          free(psz_hash);
+          return;
+       }
+    }
     strncpy( p_sys->drcs_hash_table[p_sys->i_drcs_num], psz_hash, 32 );
     p_sys->drcs_hash_table[p_sys->i_drcs_num][32] = '\0';
 
@@ -999,11 +1017,11 @@ static void parse_arib_pes( decoder_t *p_dec )
 static void dumpregion(arib_buf_region_t *p_region,mtime_t i_start,mtime_t i_stop)
 {
 	char *p1,*p2;
+	char tmp[512];
 	p1 = dumpts(i_start);
 	p2 = dumpts(i_stop);
 	for(arib_buf_region_t *p_buf_region = p_region;p_buf_region;p_buf_region = p_buf_region->p_next) {
 		int i_size = p_buf_region->p_end - p_buf_region->p_start;
-		char tmp[512];
 		strncpy(tmp,p_buf_region->p_start,i_size);
 		tmp[i_size]=0;
 		printf("%s %s %d %d [%s]\n",p1,p2,
@@ -1025,6 +1043,17 @@ static void dumparib(decoder_t *p_dec,mtime_t i_pts)
 	tostr = malloc((p_sys->i_subtitle_data_size*3)+1);
 	tostr[0]=0;
         arib_initialize_decoder(&p_sys->arib_decoder,1);
+
+	p_sys->arib_decoder.i_drcs_num = p_sys->i_drcs_num;
+
+	for( int i = 0; i < p_sys->i_drcs_num; i++ )
+	{
+		strncpy( p_sys->arib_decoder.drcs_hash_table[i],
+		p_sys->drcs_hash_table[i], 32 );
+		p_sys->arib_decoder.drcs_hash_table[i][32] = '\0';
+	}
+	p_sys->arib_decoder.p_drcs_conv = p_sys->p_drcs_conv;
+
         retlen = arib_decode_buffer( &p_sys->arib_decoder,
                                                p_sys->psz_subtitle_data,
                                                p_sys->i_subtitle_data_size,
@@ -1033,7 +1062,9 @@ static void dumparib(decoder_t *p_dec,mtime_t i_pts)
         if (retlen > 0) tostr[retlen]=0;
 	i_stop = i_pts + (int64_t)(p_sys->arib_decoder.i_control_time * 1000 * 90 );
 
-	dumpregion(p_sys->arib_decoder.p_region,i_pts,i_stop);
+	if (p_sys->arib_decoder.p_region) {
+		dumpregion(p_sys->arib_decoder.p_region,i_pts,i_stop);
+	}
 	arib_finalize_decoder(&p_sys->arib_decoder);
 
        if (tostr) free(tostr);
