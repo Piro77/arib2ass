@@ -168,6 +168,7 @@ static int ReadPacket( int i_fd, uint8_t* p_dst )
 	static int  left = 0;
 	int i = 187;
 	int i_rc = 1;
+	int i_skip = 0;
 
 	p_dst[0] = 0;
 
@@ -185,19 +186,21 @@ static int ReadPacket( int i_fd, uint8_t* p_dst )
 			if (i_rc <= 0) return i_rc;
 			left += i_rc;
 		}
+		i_skip = 0;
 		for(i=READBUFSZ-left;i<READBUFSZ;i++) {
 			if (buf[i] == 0x47) {
-				if (left >= 188) { 
+				if ((left - i_skip) >= 188) {
 					memcpy(p_dst,buf+i,188);
-					left -= 188;
+					left -= 188 + i_skip;
 					return 188;
 				}
 				else {
-					left -= READBUFSZ-i;
+					left -= i_skip;
 					i = 0;
 					break;
 				}
 			}
+			i_skip++;
 		}
 		if (i==READBUFSZ) left=0;
 	}
@@ -577,6 +580,7 @@ int main(int i_argc, char* pa_argv[])
 			vlc_bool_t b_payload = (p_tmp[3] & 0x10);
 			vlc_bool_t b_unit_start = p_tmp[1]&0x40;
 
+
 			/* Get the PID */
 			ts_pid_t *p_pid = &p_stream->pid[ ((p_tmp[i+1]&0x1f)<<8)|p_tmp[i+2] ];
 
@@ -670,6 +674,10 @@ printf("refpcr %s\n",dumpts(i_pcr));
 			int     i_size;
 			header = p_tmp + i_skip;
 			i_size = i_len - i_skip;
+
+			// Invalid ?
+			if (i_size < 0) break;
+
 			if( b_unit_start )
 			{
 				if (p_pid->p_es) {
