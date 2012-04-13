@@ -23,7 +23,11 @@
 #define PRIx8	"x"
 #define	vlc_fopen	fopen
 #define	vlc_stat	stat
+#ifdef _WIN32
+#define	vlc_mkdir(x,y)	mkdir(x)
+#else
 #define	vlc_mkdir	mkdir
+#endif
 
 #if defined( WIN32 ) || defined( UNDER_CE ) || defined( __SYMBIAN32__ ) || defined( __OS2__ )
 #   define DIR_SEP_CHAR '\\'
