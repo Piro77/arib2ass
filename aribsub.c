@@ -74,6 +74,13 @@ struct decoder_sys_t
     drcs_conversion_t *p_drcs_conv;
 };
 
+typedef struct ass_region_buf_s
+{
+    char    *p_buf;
+    bool    b_ephemer;
+    struct ass_region_buf_s *p_next;
+}ass_region_buf_t;
+
 /*****************************************************************************
  * Local prototypes
  *****************************************************************************/
@@ -83,7 +90,8 @@ static void parse_caption_management_data( decoder_t * );
 static void parse_caption_statement_data( decoder_t * );
 static void parse_data_group( decoder_t * );
 static void parse_arib_pes( decoder_t * );
-static void dumpregion(arib_buf_region_t *,mtime_t,mtime_t);
+static void dumpregion(ass_region_buf_t *,char *);
+static void pushregion(arib_buf_region_t *,mtime_t,mtime_t);
 static void dumparib(decoder_t *,mtime_t);
 
 static void *Decode( void *dec, block_t **pp_block )
@@ -1014,22 +1022,89 @@ static void parse_arib_pes( decoder_t *p_dec )
 }
 
 
-static void dumpregion(arib_buf_region_t *p_region,mtime_t i_start,mtime_t i_stop)
+static void dumpregion(ass_region_buf_t *ass,char *p_stop)
 {
-	char *p1,*p2;
+	char *p2;
+	for(ass_region_buf_t *p = ass;p;p = p->p_next) {
+		if (p->b_ephemer) {
+			asprintf(&p2,p->p_buf,p_stop);
+			printf("%s",p2);
+			free(p2);
+		}
+		else {
+			printf("%s",p->p_buf);
+		}
+		free(p->p_buf);
+		//free(p);
+	}
+}
+static void pushregion(arib_buf_region_t *p_region,mtime_t i_start,mtime_t i_stop)
+{
+	const char *cfmt="\\c&H%06x&";
+	static ass_region_buf_t *ass=NULL;
+	ass_region_buf_t *asstmp;
+	char *p1,*p2,*p3,*p4,*style;
 	char tmp[512];
 	p1 = dumpts(i_start);
-	p2 = dumpts(i_stop);
+	if (i_start == i_stop) {
+		asprintf(&p2,"%s","%s");
+	}
+	else {
+		p2 = dumpts(i_stop);
+	}
+	if (ass) {
+		dumpregion(ass,p1);
+		free(ass);
+		ass = NULL;
+	}
+	asstmp = NULL;
 	for(arib_buf_region_t *p_buf_region = p_region;p_buf_region;p_buf_region = p_buf_region->p_next) {
 		int i_size = p_buf_region->p_end - p_buf_region->p_start;
+		
 		strncpy(tmp,p_buf_region->p_start,i_size);
 		tmp[i_size]=0;
-		printf("%s %s %d %d [%s]\n",p1,p2,
-			p_buf_region->i_charleft,p_buf_region->i_charbottom,
-			tmp);
+		if (p_buf_region->i_fontheight == 18)
+			style = "Rubi";
+		else
+			style = "Default";
+		if (p_buf_region->i_foreground_color == 0xffffff) {
+			p4 = NULL;
+			asprintf(&p3,"Dialogue: 0,%s,%s,%s,,0000,0000,0000,,{\\pos(%d,%d)}%s\r\n",
+				p1,p2,style,
+				p_buf_region->i_charleft - (p_region->i_fontwidth + p_region->i_horint) ,p_buf_region->i_charbottom - (p_region->i_fontheight + p_region->i_verint),
+				tmp);
+		}
+		else {
+			asprintf(&p4,cfmt,p_buf_region->i_foreground_color);
+			asprintf(&p3,"Dialogue: 0,%s,%s,%s,,0000,0000,0000,,{\\pos(%d,%d)%s}%s\r\n",
+				p1,p2,style,
+				p_buf_region->i_charleft,p_buf_region->i_charbottom,p4,
+				tmp);
+		}
+		if (ass == NULL) {
+			asstmp = ass = calloc(1,sizeof(ass_region_buf_t));
+		}
+		else {
+			if (asstmp == NULL) {
+				ass_region_buf_t *p;
+				for(p = ass;p;p = p->p_next)
+					asstmp = p;
+			}
+			asstmp->p_next = calloc(1,sizeof(ass_region_buf_t));
+			asstmp = asstmp->p_next;
+		}
+		asstmp->p_buf = strdup(p3);
+		asstmp->b_ephemer = (i_start == i_stop);
+		free(p3);
+		if (p4) free(p4);
 	}
-	free(p1);
+	if (i_start != i_stop) {
+		dumpregion(ass,p2);
+		free(ass);
+		ass = NULL;
+	}
 	free(p2);
+	free(p1);
 }
 static void dumparib(decoder_t *p_dec,mtime_t i_pts)
 {
@@ -1060,10 +1135,11 @@ static void dumparib(decoder_t *p_dec,mtime_t i_pts)
                                                tostr,
                                                p_sys->i_subtitle_data_size*3 );
         if (retlen > 0) tostr[retlen]=0;
-	i_stop = i_pts + (int64_t)(p_sys->arib_decoder.i_control_time * 1000 * 90 );
+	//i_stop = i_pts + (int64_t)(p_sys->arib_decoder.i_control_time * 1000 * 90 );
+	i_stop = i_pts + (int64_t)(p_sys->arib_decoder.i_control_time * 1000 * 9);
 
 	if (p_sys->arib_decoder.p_region) {
-		dumpregion(p_sys->arib_decoder.p_region,i_pts,i_stop);
+		pushregion(p_sys->arib_decoder.p_region,i_pts,i_stop);
 	}
 	arib_finalize_decoder(&p_sys->arib_decoder);
 
