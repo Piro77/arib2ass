@@ -1071,15 +1071,15 @@ static void pushregion(arib_buf_region_t *p_region,mtime_t i_start,mtime_t i_sto
 			p4 = NULL;
 			asprintf(&p3,"Dialogue: 0,%s,%s,%s,,0000,0000,0000,,{\\pos(%d,%d)}%s\r\n",
 				p1,p2,style,
-				p_buf_region->i_charleft - (p_region->i_fontwidth + p_region->i_horint) ,p_buf_region->i_charbottom - (p_region->i_fontheight + p_region->i_verint),
+				p_buf_region->i_charleft - (p_buf_region->i_fontwidth + p_buf_region->i_horint) ,p_buf_region->i_charbottom - (p_buf_region->i_fontheight + p_buf_region->i_verint),
 				tmp);
 		}
 		else {
 			asprintf(&p4,cfmt,p_buf_region->i_foreground_color);
 			asprintf(&p3,"Dialogue: 0,%s,%s,%s,,0000,0000,0000,,{\\pos(%d,%d)%s}%s\r\n",
 				p1,p2,style,
-				p_buf_region->i_charleft,p_buf_region->i_charbottom,p4,
-				tmp);
+				p_buf_region->i_charleft - (p_buf_region->i_fontwidth + p_buf_region->i_horint) ,p_buf_region->i_charbottom - (p_buf_region->i_fontheight + p_buf_region->i_verint),
+				p4,tmp);
 		}
 		if (ass == NULL) {
 			asstmp = ass = calloc(1,sizeof(ass_region_buf_t));
