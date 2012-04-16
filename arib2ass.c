@@ -601,6 +601,7 @@ int main(int i_argc, char* pa_argv[])
 					p_stream->pid[i_pid].p_block = calloc(1,sizeof(block_t));
 					p_stream->pid[i_pid].decoder = calloc(1,sizeof(decoder_t));
 					dec_open(p_stream->pid[i_pid].decoder);
+printf("Target pid  0x%x PMT 0x%x \n",i_pid,p_stream->pmt.pid_pmt->i_pid);
 				}
 			}
 
@@ -659,7 +660,7 @@ int main(int i_argc, char* pa_argv[])
 					p_stream->i_pid_ref_pcr = i_pid;
                 			p_stream->i_first_pcr = i_pcr;
              				p_stream->i_current_pcr = i_pcr;
-printf("refpcr %s\n",dumpts(i_pcr));
+printf("refpcr %s pid 0x%x\n",dumpts(i_pcr),i_pid);
 				}
 				if( p_stream->i_pid_ref_pcr == p_pid->i_pid )
 				{

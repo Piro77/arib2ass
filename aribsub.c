@@ -564,36 +564,44 @@ static void save_drcs_pattern(
 {
     decoder_sys_t *p_sys = p_dec->p_sys;
     drcs_conversion_t *p_drcs_conv;
+    bool found;
 
     char* psz_hash = get_drcs_pattern_data_hash( p_dec,
             i_width, i_height, i_depth, p_patternData );
 
+    found = false;
     // has convert table?
     p_drcs_conv = p_sys->p_drcs_conv;
     while( p_drcs_conv != NULL && p_drcs_conv->hash) 
     {
         if (strcmp( p_drcs_conv->hash,psz_hash) == 0 )
         {
-            free(psz_hash);
-            return;
+            found = true;
+            break;
         }
         p_drcs_conv = p_drcs_conv->p_next;
     }
     // already saved?
-    for(int i=0;i<10;i++) {
-       if (strcmp(p_sys->drcs_hash_table[i],psz_hash) == 0)
-       {
-          free(psz_hash);
-          return;
-       }
+    if (!found) {
+        for(int i=0;i<10;i++) {
+           if (strcmp(p_sys->drcs_hash_table[i],psz_hash) == 0)
+           {
+               found = true;
+               break;
+           }
+        }
     }
+
     strncpy( p_sys->drcs_hash_table[p_sys->i_drcs_num], psz_hash, 32 );
     p_sys->drcs_hash_table[p_sys->i_drcs_num][32] = '\0';
 
     p_sys->i_drcs_num++;
 
-    save_drcs_pattern_data_image( p_dec, psz_hash,
+    if (!found)
+    {
+        save_drcs_pattern_data_image( p_dec, psz_hash,
             i_width, i_height, i_depth, p_patternData );
+    }
 
     free( psz_hash );
 }
@@ -1142,6 +1150,7 @@ static void dumparib(decoder_t *p_dec,mtime_t i_pts)
 		pushregion(p_sys->arib_decoder.p_region,i_pts,i_stop);
 	}
 	arib_finalize_decoder(&p_sys->arib_decoder);
+	p_sys->i_drcs_num = 0;
 
        if (tostr) free(tostr);
 
