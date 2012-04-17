@@ -30,6 +30,9 @@
 #include <ctype.h>
 #include <sys/stat.h>
 
+#ifdef HAVE_STDBOOL_H
+#include <stdbool.h>
+#endif
 #include "common.h"
 
 #include "vlc_bits.h"
@@ -1040,6 +1043,7 @@ static void dumpheader(decoder_t *p_dec)
         printf("; http://www.aegisub.net\r\nScriptType: v4.00+\r\nWrapStyle: 0\r\nPlayResX: 960\r\nPlayResY: 540\r\nScaledBorderAndShadow: yes\r\nVideo Aspect Ratio: 0\r\nVideo Zoom: 6\r\nVideo Position: 0\r\n\r\n");
         printf("[V4+ Styles]\r\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\r\n");
         printf("Style: Default,メイリオARIB,55,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,4,0,1,2,2,7,0,0,0,0\r\n");
+        printf("Style:    Half,メイリオARIB,55,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,50,100,4,0,1,2,2,7,0,0,0,0\r\n");
         printf("Style:    Rubi,メイリオARIB,28,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,2,0,1,2,2,7,0,0,0,0\r\n");
         printf("\r\n[Events]\r\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\r\n");
         return;
@@ -1097,10 +1101,15 @@ static void pushregion(decoder_t  *p_dec,mtime_t i_start,mtime_t i_stop)
 		
 		strncpy(tmp,p_buf_region->p_start,i_size);
 		tmp[i_size]=0;
-		if (p_buf_region->i_fontheight == 18)
+		if (p_buf_region->i_fontheight == 18) {
 			style = "Rubi";
-		else
-			style = "Default";
+		}
+		else {
+			if (p_buf_region->i_fontwidth == 36)
+				style = "Default";
+			else
+				style = "Half";
+		}
 		if (p_buf_region->i_foreground_color == 0xffffff) {
 			p4 = NULL;
 			asprintf(&p3,"Dialogue: 0,%s,%s,%s,,0000,0000,0000,,{\\pos(%d,%d)}%s\r\n",
