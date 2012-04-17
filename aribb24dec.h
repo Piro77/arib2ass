@@ -27,10 +27,6 @@
 
 #define DEBUG_ARIBB24DEC 1
 
-#define bool unsigned char
-#define true 1
-#define false 0
-
 #if 0
 /*****************************************************************************
  * ARIB STD-B24 VOLUME 1 Part 3 Chapter 9.3.1 Caption management data
@@ -140,6 +136,9 @@ typedef struct arib_buf_region_s
     int i_charleft;
     int i_charbottom;
 
+    int i_veradj;
+    int i_horadj;
+
     struct arib_buf_region_s *p_next;
 } arib_buf_region_t;
 
@@ -209,6 +208,7 @@ typedef struct arib_decoder_s
 
 static void decoder_adjust_position( arib_decoder_t *decoder )
 {
+#if 0
     if( decoder->i_charleft < decoder->i_left )
     {
         decoder->i_charleft = decoder->i_left - decoder->i_charleft;
@@ -223,6 +223,7 @@ static void decoder_adjust_position( arib_decoder_t *decoder )
         decoder->i_charleft = decoder->i_left + ( decoder->i_charleft % decoder->i_width );
         decoder->i_charleft = decoder->i_left + ( decoder->i_charleft - decoder->i_left ) / decoder->i_charwidth * decoder->i_charwidth;
     }
+#endif
 
     decoder->b_need_next_region = true;
 }
@@ -283,19 +284,123 @@ static inline int u8_uctomb( unsigned char *s, unsigned int uc, int n )
 static int decoder_push( arib_decoder_t *decoder, unsigned int uc )
 {
     char *p_start = decoder->ubuf;
-#ifdef DUMPARIB
-printf("width %d 0x%04x\n",decoder->i_charwidth,uc);
-#endif
 
-    if( uc == 0x3000 || uc == 0x20 )
-    {
-        // prevent making new region when space comes
-        decoder->i_foreground_color = decoder->i_foreground_color_prev; 
-    }
     if( decoder->i_foreground_color_prev != decoder->i_foreground_color )
     {
         decoder->i_foreground_color_prev = decoder->i_foreground_color; 
         decoder->b_need_next_region = true;
+    }
+
+    /* Check for new paragraph/region */
+    if( decoder->i_charleft >= decoder->i_right )
+    {
+        decoder->i_charleft = decoder->i_left;
+        decoder->i_charbottom += decoder->i_charheight;
+        decoder->b_need_next_region = true;
+    }
+
+    /* Ignore making new region */
+    bool b_skip_making_new_region = false;
+    if( decoder->b_need_next_region )
+    {
+        switch( uc )
+        {
+            //case 0x2026: /* HORIZONTAL ELLIPSIS */
+            case 0x2192: /* RIGHTWARDS ARROW */
+            case 0x3001: /* IDEOGRAPHIC COMMA */
+            case 0x3002: /* IDEOGRAPHIC FULL STOP */
+            case 0xFF0C: /* FULLWIDTH COMMA */
+            case 0xFF0E: /* FULLWIDTH FULL STOP */
+                decoder->b_need_next_region = false;
+                b_skip_making_new_region = true;
+                break;
+            default:
+                break;
+        }
+    }
+
+    /* Adjust for somme characters */
+    int i_veradj;
+    int i_horadj;
+    switch( uc )
+    {
+        case 0x2026: /* HORIZONTAL ELLIPSIS */
+        case 0x2192: /* RIGHTWARDS ARROW */
+            i_veradj = decoder->i_fontheight * 1 / 3;
+            i_horadj = 0;
+            break;
+        case 0x3000: /* IDEOGRAPHIC SPACE */
+            i_veradj = decoder->i_fontheight * 2 / 3 ;
+            i_horadj = 0;
+            break;
+        case 0x3001: /* IDEOGRAPHIC COMMA */
+        case 0x3002: /* IDEOGRAPHIC FULL STOP */
+            i_veradj = decoder->i_fontheight * 7 / 12 ;
+            i_horadj = 0;
+            break;
+        case 0x226A: /* MUCH LESS-THAN */
+        case 0x226B: /* MUCH GREATER-THAN */
+        case 0x300A: /* LEFT DOUBLE ANGLE BRACKET */
+        case 0x300B: /* RIGHT DOUBLE ANGLE BRACKET */
+            i_veradj = decoder->i_fontheight * 1 / 4 ;
+            i_horadj = 0;
+            break;
+        case 0x300C: /* LEFT CORNER BRACKET */
+        case 0x300E: /* LEFT WHITE CORNER BRACKET */
+            i_veradj = 0;
+            i_horadj = decoder->i_fontwidth * 1 / 9;
+            break;
+        case 0x300D: /* RIGHT CORNER BRACKET */
+        case 0x300F: /* RIGHT WHITE CORNER BRACKET */
+            i_veradj = decoder->i_fontheight * 1 / 3 ;
+            i_horadj = 0;
+            break;
+        case 0x3063: /* HIRAGANA LETTER SMALL TU */
+        case 0x30C3: /* KATAKANA LETTER SMALL TU */
+            i_veradj = decoder->i_fontheight * 1 / 4;
+            i_horadj = 0;
+            break;
+        case 0x3041: /* HIRAGANA LETTER SMALL A */
+        case 0x30A1: /* KATAKANA LETTER SMALL A */
+        case 0x3043: /* HIRAGANA LETTER SMALL I */
+        case 0x30A3: /* KATAKANA LETTER SMALL I */
+        case 0x3045: /* HIRAGANA LETTER SMALL U */
+        case 0x30A5: /* KATAKANA LETTER SMALL U */
+        case 0x3047: /* HIRAGANA LETTER SMALL E */
+        case 0x30A7: /* KATAKANA LETTER SMALL E */
+        case 0x3049: /* HIRAGANA LETTER SMALL O */
+        case 0x30A9: /* KATAKANA LETTER SMALL O */
+        case 0x3083: /* HIRAGANA LETTER SMALL YA */
+        case 0x3085: /* HIRAGANA LETTER SMALL YU */
+        case 0x3087: /* HIRAGANA LETTER SMALL YO */
+        case 0x30E3: /* KATAKANA LETTER SMALL YA */
+        case 0x30E5: /* KATAKANA LETTER SMALL YU */
+        case 0x30E7: /* KATAKANA LETTER SMALL YO */
+            i_veradj = decoder->i_fontheight * 1 / 6;
+            i_horadj = 0;
+            break;
+        case 0x301C: /* WAVE DASH */
+            i_veradj = decoder->i_fontheight * 1 / 3;
+            i_horadj = 0;
+            break;
+        case 0x30FB: /* KATAKANA MIDDLE DOT */
+            i_veradj = decoder->i_fontheight * 1 / 3;
+            i_horadj = decoder->i_fontwidth * 1 / 9;
+            break;
+        case 0xFF08: /* FULLWIDTH LEFT PARENTHESIS */
+        case 0xFF09: /* FULLWIDTH RIGHT PARENTHESIS */
+            i_veradj = 0;
+            i_horadj = decoder->i_fontwidth * 1 / 9;
+            break;
+        case 0xFF0C: /* FULLWIDTH COMMA */
+        case 0xFF0E: /* FULLWIDTH FULL STOP */
+            i_veradj = decoder->i_fontheight * 7 / 12 ;
+            i_horadj = 0;
+            break;
+        default:
+            i_veradj = 0;
+            i_horadj = 0;
+            break;
     }
 
     int i_cnt = u8_uctomb( (unsigned char*)decoder->ubuf, uc, decoder->ucount );
@@ -310,13 +415,12 @@ printf("width %d 0x%04x\n",decoder->i_charwidth,uc);
     char *p_end = decoder->ubuf;
 
     decoder->i_charleft += decoder->i_charwidth;
-    //decoder_adjust_position( decoder );
 
     arib_buf_region_t *p_region = decoder->p_region;
     if( p_region == NULL )
     {
         p_region = decoder->p_region = 
-            (arib_buf_region_t*) malloc( sizeof(arib_buf_region_t) );
+            (arib_buf_region_t*) calloc( 1, sizeof(arib_buf_region_t) );
         if( p_region == NULL )
         {
             return 0;
@@ -340,19 +444,24 @@ printf("width %d 0x%04x\n",decoder->i_charwidth,uc);
         p_region->i_charleft = decoder->i_charleft;
         p_region->i_charbottom = decoder->i_charbottom;
 
+        p_region->i_veradj = i_veradj;
+        p_region->i_horadj = i_horadj;
+
         p_region->p_next = NULL;
 
         decoder->b_need_next_region = false;
     }
+
     arib_buf_region_t *p_next;
     while( (p_next = p_region->p_next) != NULL )
     {
         p_region = p_next;
     }
+
     if( decoder->b_need_next_region )
     {
         p_region = p_region->p_next =
-            (arib_buf_region_t*) malloc( sizeof(arib_buf_region_t) );
+            (arib_buf_region_t*) calloc( 1, sizeof(arib_buf_region_t) );
         if( p_region == NULL )
         {
             return 0;
@@ -376,11 +485,28 @@ printf("width %d 0x%04x\n",decoder->i_charwidth,uc);
         p_region->i_charleft = decoder->i_charleft;
         p_region->i_charbottom = decoder->i_charbottom;
 
+        p_region->i_veradj = i_veradj;
+        p_region->i_horadj = i_horadj;
+
         p_region->p_next = NULL;
 
         decoder->b_need_next_region = false;
     }
+    else
+    {
+        if( p_region->i_veradj > i_veradj ||
+            p_region->i_horadj > i_horadj )
+        {
+            p_region->i_veradj = i_veradj;
+            p_region->i_horadj = i_horadj;
+        }
+    }
     p_region->p_end = p_end;
+
+    if( b_skip_making_new_region )
+    {
+        decoder->b_need_next_region = true;
+    }
 
     return 1;
 }
@@ -451,10 +577,7 @@ static int decoder_handle_alnum( arib_decoder_t *decoder, int c )
 {
     unsigned int uc;
     uc = decoder_alnum_table[c];
-    if( decoder->i_fontwidth_cur == decoder->i_fontheight_cur )
-    {
-        uc += 0xfee0; /* FULLWIDTH */;
-    }
+    uc += 0xfee0; /* FULLWIDTH */;
     return decoder_push( decoder, uc );
 }
 
@@ -473,32 +596,10 @@ static const unsigned int decoder_hiragana_table[] = {
     0x30fc, 0x3002, 0x300c, 0x300d, 0x3001, 0x30fb,
 };
 
-static const unsigned int decoder_hiragana_hankaku_table[] = {
-    0x3041, 0x3042, 0x3043, 0x3044, 0x3045, 0x3046, 0x3047, 0x3048,
-    0x3049, 0x304a, 0x304b, 0x304c, 0x304d, 0x304e, 0x304f, 0x3050,
-    0x3051, 0x3052, 0x3053, 0x3054, 0x3055, 0x3056, 0x3057, 0x3058,
-    0x3059, 0x305a, 0x305b, 0x305c, 0x305d, 0x305e, 0x305f, 0x3060,
-    0x3061, 0x3062, 0x3063, 0x3064, 0x3065, 0x3066, 0x3067, 0x3068,
-    0x3069, 0x306a, 0x306b, 0x306c, 0x306d, 0x306e, 0x306f, 0x3070,
-    0x3071, 0x3072, 0x3073, 0x3074, 0x3075, 0x3076, 0x3077, 0x3078,
-    0x3079, 0x307a, 0x307b, 0x307c, 0x307d, 0x307e, 0x307f, 0x3080,
-    0x3081, 0x3082, 0x3083, 0x3084, 0x3085, 0x3086, 0x3087, 0x3088,
-    0x3089, 0x308a, 0x308b, 0x308c, 0x308d, 0x308e, 0x308f, 0x3090,
-    0x3091, 0x3092, 0x3093, 0x20,   0x20,   0x20,   0x309d, 0x309e,
-    0xff70, 0xff61, 0xff62, 0xff63, 0xff64, 0xff65,
-};
-
 static int decoder_handle_hiragana( arib_decoder_t *decoder, int c )
 {
     unsigned int uc;
-    if( decoder->i_fontwidth_cur == decoder->i_fontheight_cur )
-    {
-        uc = decoder_hiragana_table[c];
-    }
-    else
-    {
-        uc = decoder_hiragana_hankaku_table[c];
-    }
+    uc = decoder_hiragana_table[c];
     return decoder_push( decoder, uc );
 }
 
@@ -517,55 +618,10 @@ static const unsigned int decoder_katakana_table[] = {
     0x30fc, 0x3002, 0x300c, 0x300d, 0x3001, 0x30fb,
 };
 
-static const unsigned int decoder_katakana_hankaku_table[] = {
-    0xff67, 0xff71, 0xff68, 0xff72, 0xff69, 0xff73, 0xff6a, 0xff74,
-    0xff6b, 0xff75, 0xff76, 0xff76, 0xff77, 0xff77, 0xff78, 0xff78,
-    0xff79, 0xff79, 0xff7a, 0xff7a, 0xff7b, 0xff7b, 0xff7c, 0xff7c,
-    0xff7d, 0xff7d, 0xff7e, 0xff7e, 0xff7f, 0xff7f, 0xff80, 0xff80,
-    0xff81, 0xff81, 0xff6f, 0xff82, 0xff82, 0xff83, 0xff83, 0xff84,
-    0xff84, 0xff85, 0xff86, 0xff87, 0xff88, 0xff89, 0xff8a, 0xff8a,
-    0xff8a, 0xff8b, 0xff8b, 0xff8b, 0xff8c, 0xff8c, 0xff8c, 0xff8d,
-    0xff8d, 0xff8d, 0xff8e, 0xff8e, 0xff8e, 0xff8f, 0xff90, 0xff91,
-    0xff92, 0xff93, 0xff6c, 0xff94, 0xff6d, 0xff95, 0xff6e, 0xff96,
-    0xff97, 0xff98, 0xff99, 0xff9a, 0xff9b, 0x30ee, 0xff9c, 0x30f0,
-    0x30f1, 0xff66, 0xff9d, 0xff73, 0xff76, 0xff79, 0x30fd, 0x30fe,
-    0xff70, 0xff61, 0xff62, 0xff63, 0xff64, 0xff65,
-};
-
-static const unsigned int decoder_katakana_hankaku_surrogate_table[] = {
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-    0x0000, 0x0000, 0x0000, 0xff9e, 0x0000, 0xff9e, 0x0000, 0xff9e,
-    0x0000, 0xff9e, 0x0000, 0xff9e, 0x0000, 0xff9e, 0x0000, 0xff9e,
-    0x0000, 0xff9e, 0x0000, 0xff9e, 0x0000, 0xff9e, 0x0000, 0xff9e,
-    0x0000, 0xff9e, 0x0000, 0x0000, 0xff9e, 0x0000, 0xff9e, 0x0000,
-    0xff9e, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0xff9e,
-    0xff9f, 0x0000, 0xff9e, 0xff9f, 0x0000, 0xff9e, 0xff9f, 0x0000,
-    0xff9e, 0xff9f, 0x0000, 0xff9e, 0xff9f, 0x0000, 0x0000, 0x0000,
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-    0x0000, 0x0000, 0x0000, 0xff9e, 0x0000, 0x0000, 0x0000, 0x0000,
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-};
-
 static int decoder_handle_katakana( arib_decoder_t *decoder, int c )
 {
     unsigned int uc;
-    if( decoder->i_fontwidth_cur == decoder->i_fontheight_cur )
-    {
-        uc = decoder_katakana_table[c];
-    }
-    else
-    {
-        uc = decoder_katakana_hankaku_table[c];
-        unsigned int uc2;
-        uc2 = decoder_katakana_hankaku_surrogate_table[c];
-        if( uc2 )
-        {
-            decoder_push( decoder, uc );
-            decoder->i_charleft -= decoder->i_charwidth;
-            uc = uc2;
-        }
-    }
+    uc = decoder_katakana_table[c];
     return decoder_push( decoder, uc );
 }
 
@@ -1745,59 +1801,6 @@ static int decoder_handle_kanji( arib_decoder_t *decoder, int c )
         return 0;
     }
 
-    if( decoder->i_fontwidth_cur != decoder->i_fontheight_cur )
-    {
-        bool b_found = false;
-        if( !b_found )
-        {
-            if( uc == 0x3000 )
-            {
-                uc = 0x20;
-                b_found = true;
-            }
-        }
-        if( !b_found )
-        {
-            // alnum
-            int i_table_num =
-                sizeof(decoder_alnum_table) /
-                sizeof(decoder_alnum_table[0]);
-            for( int i = 0; i < i_table_num; i++ )
-            {
-                if( uc == decoder_alnum_table[i] + 0xfee0 )
-                {
-                    uc = decoder_alnum_table[i];
-                    b_found = true;
-                    break;
-                }
-            }
-        }
-        if( !b_found )
-        {
-            // katakana
-            int i_table_num =
-                sizeof(decoder_katakana_table) /
-                sizeof(decoder_katakana_table[0]);
-            for( int i = 0; i < i_table_num; i++ )
-            {
-                if( uc == decoder_katakana_table[i] )
-                {
-                    uc = decoder_katakana_hankaku_table[i];
-                    unsigned int uc2;
-                    uc2 = decoder_katakana_hankaku_surrogate_table[i];
-                    if( uc2 )
-                    {
-                        decoder_push( decoder, uc );
-                        decoder->i_charleft -= decoder->i_charwidth;
-                        uc = uc2;
-                    }
-                    b_found = true;
-                    break;
-                }
-            }
-        }
-    }
-
     return decoder_push( decoder, uc );
 }
 
@@ -1807,6 +1810,7 @@ static int decoder_handle_gl( arib_decoder_t *decoder, int c )
 
     if( c == 0x20 || c == 0x7f )
     {
+        c = 0x3000;
         return decoder_push( decoder, c );
     }
 
@@ -1962,9 +1966,6 @@ static int decoder_handle_aps( arib_decoder_t *decoder )
         decoder->i_charbottom = decoder->i_top + decoder->i_charheight * ( 1 + ( buf[0] & 0x3f ) ) - 1;
         decoder->i_charleft = decoder->i_left + decoder->i_charwidth * ( buf[1] & 0x3f );
         decoder_adjust_position( decoder );
-#ifdef DUMPARIB
-printf("APS %d %d\n",buf[0]&0x3f,buf[1]&0x3f);
-#endif
     }
     return 1;
 }
@@ -2047,6 +2048,7 @@ static int decoder_handle_szx( arib_decoder_t *decoder )
                 decoder->i_verint_cur = decoder->i_verint / 6;
                 decoder->i_charwidth = decoder->i_fontwidth_cur + decoder->i_horint_cur;
                 decoder->i_charheight = decoder->i_fontheight_cur + decoder->i_verint_cur;
+                decoder->b_need_next_region = true;
                 return 1;
             case 0x41:
                 decoder->i_fontwidth_cur = decoder->i_fontwidth;
@@ -2055,6 +2057,7 @@ static int decoder_handle_szx( arib_decoder_t *decoder )
                 decoder->i_verint_cur = decoder->i_verint * 2;
                 decoder->i_charwidth = decoder->i_fontwidth_cur + decoder->i_horint_cur;
                 decoder->i_charheight = decoder->i_fontheight_cur + decoder->i_verint_cur;
+                decoder->b_need_next_region = true;
                 return 1;
             case 0x44:
                 decoder->i_fontwidth_cur = decoder->i_fontwidth * 2;
@@ -2063,6 +2066,7 @@ static int decoder_handle_szx( arib_decoder_t *decoder )
                 decoder->i_verint_cur = decoder->i_verint;
                 decoder->i_charwidth = decoder->i_fontwidth_cur + decoder->i_horint_cur;
                 decoder->i_charheight = decoder->i_fontheight_cur + decoder->i_verint_cur;
+                decoder->b_need_next_region = true;
                 return 1;
             case 0x45:
                 decoder->i_fontwidth_cur = decoder->i_fontwidth * 2;
@@ -2071,6 +2075,7 @@ static int decoder_handle_szx( arib_decoder_t *decoder )
                 decoder->i_verint_cur = decoder->i_verint * 2;
                 decoder->i_charwidth = decoder->i_fontwidth_cur + decoder->i_horint_cur;
                 decoder->i_charheight = decoder->i_fontheight_cur + decoder->i_verint_cur;
+                decoder->b_need_next_region = true;
                 return 1;
             case 0x6b:
             case 0x64:
@@ -2080,6 +2085,7 @@ static int decoder_handle_szx( arib_decoder_t *decoder )
                 decoder->i_verint_cur = decoder->i_verint;
                 decoder->i_charwidth = decoder->i_fontwidth_cur + decoder->i_horint_cur;
                 decoder->i_charheight = decoder->i_fontheight_cur + decoder->i_verint_cur;
+                decoder->b_need_next_region = true;
                 return 1;
             default:
                 return 0;
@@ -2101,9 +2107,6 @@ static int decoder_handle_col( arib_decoder_t *decoder )
                 decoder->i_foreground_alpha = 0xff; // fully transparent
                 return 1;
             default:
-#ifdef DUMPARIB
-printf("col %x\n",c);
-#endif
                 return 1;
         }
     }
@@ -2303,9 +2306,6 @@ static int decoder_handle_csi( arib_decoder_t *decoder )
                     decoder->i_height = i_param2;
                     decoder->i_right = decoder->i_left + decoder->i_width;
                     decoder->i_bottom = decoder->i_top + decoder->i_height;
-#ifdef DUMPARIB
-printf("SDF left %d top %d \n",i_param1,i_param2);
-#endif
                 }
                 return 1;
             case 0x57: //SSM
@@ -2341,9 +2341,6 @@ printf("SDF left %d top %d \n",i_param1,i_param2);
                     decoder->i_top = i_param2;
                     decoder->i_right = decoder->i_left + decoder->i_width;
                     decoder->i_bottom = decoder->i_top + decoder->i_height;
-#ifdef DUMPARIB
-printf("SDP left %d top %d\n",i_param1,i_param2);
-#endif
                 }
                 return 1;
             case 0x6e: //RCS
@@ -2373,9 +2370,6 @@ printf("SDP left %d top %d\n",i_param1,i_param2);
                     }
                     decoder->i_charleft = i_param1;
                     decoder->i_charbottom = i_param2;
-#ifdef DUMPARIB
-printf("ACPS left %d top %d\n",i_param1,i_param2);
-#endif
                 }
                 decoder->b_need_next_region = true;
                 return 1;
@@ -2457,113 +2451,70 @@ static int decoder_handle_c1( arib_decoder_t *decoder, int c )
             decoder->i_foreground_color_prev = decoder->i_foreground_color;
             decoder->i_foreground_color = 0x000000;
             decoder->i_color_map |= 0x0000;
-#ifdef DUMPARIB
-printf("BKF\n");
-#endif
             return 1;
         case 0x81: //RDF
             decoder->i_foreground_color_prev = decoder->i_foreground_color;
             decoder->i_foreground_color = 0xED1A3D;
             decoder->i_color_map |= 0x0001;
-#ifdef DUMPARIB
-printf("RDF\n");
-#endif
             return 1;
         case 0x82: //GRF
             decoder->i_foreground_color_prev = decoder->i_foreground_color;
             decoder->i_foreground_color = 0x00FF00;
             decoder->i_color_map |= 0x0002;
-#ifdef DUMPARIB
-printf("GRF\n");
-#endif
             return 1;
         case 0x83: //YLF
             decoder->i_foreground_color_prev = decoder->i_foreground_color;
             decoder->i_foreground_color = 0xFFD400;
             decoder->i_color_map |= 0x0003;
-#ifdef DUMPARIB
-printf("YLF\n");
-#endif
             return 1;
         case 0x84: //BLF
             decoder->i_foreground_color_prev = decoder->i_foreground_color;
             decoder->i_foreground_color = 0x009AD6;
             decoder->i_color_map |= 0x0004;
-#ifdef DUMPARIB
-printf("BLF\n");
-#endif
             return 1;
         case 0x85: //MGF
             decoder->i_foreground_color_prev = decoder->i_foreground_color;
             decoder->i_foreground_color = 0xEC008C;
             decoder->i_color_map |= 0x0005;
-#ifdef DUMPARIB
-printf("MGF\n");
-#endif
             return 1;
         case 0x86: //CNF
             decoder->i_foreground_color_prev = decoder->i_foreground_color;
             decoder->i_foreground_color = 0x00FFFF;
             decoder->i_color_map |= 0x0006;
-#ifdef DUMPARIB
-printf("CNF\n");
-#endif
             return 1;
         case 0x87: //WHF
             decoder->i_foreground_color_prev = decoder->i_foreground_color;
             decoder->i_foreground_color = 0xFFFFFF;
             decoder->i_color_map |= 0x0007;
-#ifdef DUMPARIB
-printf("WHF\n");
-#endif
             return 1;
         case 0x88: //SSZ
-#ifdef ARIB_STRICT_POS
-            decoder->b_need_next_region = true;
-#endif
             decoder->i_fontwidth_cur = decoder->i_fontwidth / 2;
             decoder->i_fontheight_cur = decoder->i_fontheight / 2;
             decoder->i_horint_cur = decoder->i_horint / 2;
             decoder->i_verint_cur = decoder->i_verint / 2;
             decoder->i_charwidth = decoder->i_fontwidth_cur + decoder->i_horint_cur;
             decoder->i_charheight = decoder->i_fontheight_cur + decoder->i_verint_cur;
-
-#ifdef DUMPARIB
-printf("SSZ\n");
-#endif
+            decoder->b_need_next_region = true;
             return 1;
         case 0x89: //MSZ
-#ifdef ARIB_STRICT_POS
-            decoder->b_need_next_region = true;
-#endif
             decoder->i_fontwidth_cur = decoder->i_fontwidth / 2;
             decoder->i_fontheight_cur = decoder->i_fontheight;
             decoder->i_horint_cur = decoder->i_horint / 2;
             decoder->i_verint_cur = decoder->i_verint;
             decoder->i_charwidth = decoder->i_fontwidth_cur + decoder->i_horint_cur;
             decoder->i_charheight = decoder->i_fontheight_cur + decoder->i_verint_cur;
-#ifdef DUMPARIB
-printf("MSZ %d %d font %d %d\n",decoder->i_charwidth,decoder->i_charheight,decoder->i_fontwidth,decoder->i_fontheight);
-#endif
-            return 1;
-        case 0x8a: //NSZ
-#ifdef ARIB_STRICT_POS
             decoder->b_need_next_region = true;
-#endif
+            return 1;    
+        case 0x8a: //NSZ
             decoder->i_fontwidth_cur = decoder->i_fontwidth;
             decoder->i_fontheight_cur = decoder->i_fontheight;
             decoder->i_horint_cur = decoder->i_horint;
             decoder->i_verint_cur = decoder->i_verint;
             decoder->i_charwidth = decoder->i_fontwidth_cur + decoder->i_horint_cur;
             decoder->i_charheight = decoder->i_fontheight_cur + decoder->i_verint_cur;
-#ifdef DUMPARIB
-printf("NSZ %d %d font %d %d\n",decoder->i_charwidth,decoder->i_charheight,decoder->i_fontwidth,decoder->i_fontheight);
-#endif
+            decoder->b_need_next_region = true;
             return 1;
         case 0x8b: //SZX
-#ifdef ARIB_STRICT_POS
-            decoder->b_need_next_region = true;
-#endif
             return decoder_handle_szx( decoder );
         case 0x90: //COL
             return decoder_handle_col( decoder );
