@@ -1114,14 +1114,16 @@ static void pushregion(decoder_t  *p_dec,mtime_t i_start,mtime_t i_stop)
 			p4 = NULL;
 			asprintf(&p3,"Dialogue: 0,%s,%s,%s,,0000,0000,0000,,{\\pos(%d,%d)}%s\r\n",
 				p1,p2,style,
-				p_buf_region->i_charleft - (p_buf_region->i_fontwidth + p_buf_region->i_horint) ,p_buf_region->i_charbottom - (p_buf_region->i_fontheight + p_buf_region->i_verint),
+				p_buf_region->i_charleft - (p_buf_region->i_fontwidth + p_buf_region->i_horint) ,
+				p_buf_region->i_charbottom - (p_buf_region->i_fontheight + p_buf_region->i_verint),
 				tmp);
 		}
 		else {
 			asprintf(&p4,cfmt,p_buf_region->i_foreground_color);
 			asprintf(&p3,"Dialogue: 0,%s,%s,%s,,0000,0000,0000,,{\\pos(%d,%d)%s}%s\r\n",
 				p1,p2,style,
-				p_buf_region->i_charleft - (p_buf_region->i_fontwidth + p_buf_region->i_horint) ,p_buf_region->i_charbottom - (p_buf_region->i_fontheight + p_buf_region->i_verint),
+				p_buf_region->i_charleft - (p_buf_region->i_fontwidth + p_buf_region->i_horint) ,
+				p_buf_region->i_charbottom - (p_buf_region->i_fontheight + p_buf_region->i_verint),
 				p4,tmp);
 		}
 		if (ass == NULL) {

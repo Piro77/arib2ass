@@ -74,7 +74,7 @@ static char * dumpts(mtime_t ts)
         sec -= min * 60;
         hour = min / 60;
         min -= hour * 60;
-        asprintf(&buf,"%02d:%02d:%02d.%02d", hour, min%60, sec%60, ts/90);
+        asprintf(&buf,"%02d:%02d:%02d.%02d", hour, min%60, sec%60, ts/900);
         return buf;
 }
 
