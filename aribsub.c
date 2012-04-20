@@ -1064,7 +1064,7 @@ static void dumpheader(decoder_t *p_dec)
     if (p_sys->outputfile) {
       p_sys->outputfp = vlc_fopen(p_sys->outputfile,"w");
       if (p_sys->outputfp == NULL) {
-        fprintf(stderr,"output [%s] can't open output to stdout\n");
+        fprintf(stderr,"output [%s] can't open output to stdout\n",p_sys->outputfile);
         p_sys->outputfp = stdout;
       }
     }
