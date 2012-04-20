@@ -467,8 +467,8 @@ static mtime_t GetPCR( uint8_t *p )
  *****************************************************************************/
 static void usage( char *name )
 {
-	printf( "Usage: %s [--file <filename>|--help|--output <ofilename>]\n", name );
-	printf( "       %s [-f <filename>|-h|-o <ofilename>]\n", name );
+	printf( "Usage: %s [--file <filename>|--help|--debug|--output <ofilename>]\n", name );
+	printf( "       %s [-f <filename>|-h|-d|-o <ofilename>]\n", name );
 	printf( "\n" );
 	printf( "       %s --help\n", name );
 	printf( "       %s --file <filename> --output <ofilename>\n", name );
@@ -476,11 +476,22 @@ static void usage( char *name )
 	printf( "file   : read MPEG2-TS stream from file\n" );
 	printf( "output : output ASS filename \n" );
 	printf( "help   : print this help message\n" );
+	printf( "debug  : output debug info to <filename>.asslog \n" );
 }
 static char *outputfilename = NULL;
+static char *filename = NULL;
+static int  debugflg = 0;
 char *getoutputfilename()
 {
 	return outputfilename;
+}
+char *getinputfilename()
+{
+	return filename;
+}
+char *getdebugflg()
+{
+	return debugflg;
 }
 
 /*****************************************************************************
@@ -488,10 +499,11 @@ char *getoutputfilename()
  *****************************************************************************/
 int main(int i_argc, char* pa_argv[])
 {
-	const char* const short_options = "hf:vo:";
+	const char* const short_options = "hdf:vo:";
 	const struct option long_options[] =
 	{
 		{ "help",       0, NULL, 'h' },
+		{ "debug",      0, NULL, 'd' },
 		{ "file",       1, NULL, 'f' },
 		{ "output",     1, NULL, 'o' },
 		{ "verbose",    0, NULL, 'v' },
@@ -508,7 +520,6 @@ int main(int i_argc, char* pa_argv[])
 	mtime_t  i_prev_pcr = 0;  /* 33 bits */
 	int      i_old_cc = -1;
 	uint32_t i_bytes = 0; /* bytes transmitted between PCR's */
-	char *filename = NULL;
 
 	uint8_t *p_data = NULL;
 	ts_stream_t *p_stream = NULL;
@@ -533,6 +544,9 @@ int main(int i_argc, char* pa_argv[])
 				break;
 			case 'v':
 				b_verbose = 1;
+				break;
+			case 'd':
+				debugflg = 1;
 				break;
 			case -1:
 				break;

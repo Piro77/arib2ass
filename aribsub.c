@@ -76,7 +76,9 @@ struct decoder_sys_t
 
     drcs_conversion_t *p_drcs_conv;
     char              *outputfile;
+    char              *inputfile;
     FILE              *outputfp;
+    FILE              *debugfp;
 };
 
 typedef struct ass_region_buf_s
@@ -142,6 +144,15 @@ void *dec_open(void *p_this)
     load_drcs_conversion_table( p_dec );
 
     p_sys->outputfile = (char *)getoutputfilename();
+    p_sys->inputfile = (char *)getinputfilename();
+    if (getdebugflg())
+    {
+       char *debugfile;
+       asprintf(&debugfile,"%s.asslog",p_sys->inputfile);
+       p_sys->debugfp = vlc_fopen(debugfile,"w");
+       free(debugfile);
+    }
+
 }
 void *dec_close(void *p_this)
 {
@@ -151,6 +162,7 @@ void *dec_close(void *p_this)
     decoder_sys_t *p_sys = p_dec->p_sys;
 
     if (p_sys->outputfp) fclose(p_sys->outputfp);
+    if (p_sys->debugfp) fclose(p_sys->debugfp);
 
     // XXX need free
 
@@ -1203,6 +1215,8 @@ static void dumparib(decoder_t *p_dec,mtime_t i_pts)
 	static mtime_t i_prev_pts;
 	static arib_decoder_t *prev_decoder=NULL;
 
+	if (p_sys->psz_subtitle_data == NULL) return;
+
 	tostr = malloc((p_sys->i_subtitle_data_size*3)+1);
 	tostr[0]=0;
         arib_initialize_decoder(&p_sys->arib_decoder,1);
@@ -1225,6 +1239,25 @@ static void dumparib(decoder_t *p_dec,mtime_t i_pts)
         if (retlen > 0) tostr[retlen]=0;
 	//i_stop = i_pts + (int64_t)(p_sys->arib_decoder.i_control_time * 1000 * 90 );
 	i_stop = i_pts + (int64_t)(p_sys->arib_decoder.i_control_time * 1000 * 9);
+
+	if (p_sys->arib_decoder.p_region && p_sys->debugfp) {
+		const unsigned char* start = (const unsigned char*)p_sys->psz_subtitle_data;
+		const unsigned char* end = (const unsigned char*)p_sys->psz_subtitle_data + p_sys->i_subtitle_data_size;
+    		char *dumpdata,*pts,dumpwk[10];
+    		dumpdata = malloc((p_sys->i_subtitle_data_size * 4)+1);
+    		dumpdata[0]=NULL;
+		while( start < end )
+		{
+			sprintf(dumpwk,"%02x ",*start++);
+			strcat(dumpdata,dumpwk);
+		}
+		pts = dumpts(i_pts);
+		fprintf(p_sys->debugfp,"%s str [%s]\r\n",pts,tostr);
+		fprintf(p_sys->debugfp,"dmp [%s]\r\n",dumpdata);
+		
+		free(dumpdata);
+		free(pts);
+	}
 
 	if (p_sys->arib_decoder.p_region) {
 		pushregion(p_dec,i_pts,i_stop);
