@@ -74,6 +74,10 @@
 #define SUBTITLING_DR 0x59
 
 #define READBUFSZ 8192
+
+#ifndef _WIN32
+#define O_BINARY 0
+#endif
 /*****************************************************************************
  * General typdefs
  *****************************************************************************/
@@ -149,8 +153,7 @@ typedef struct
 	mtime_t     *p_pcrs;
 	int64_t     *p_pos;
 	uint16_t    i_packet_size;
-	int         i_fd
-
+	int         i_fd;
 
 } ts_stream_t;
 
@@ -542,7 +545,7 @@ int main(int i_argc, char* pa_argv[])
 	/* initialize */
 	if( filename )
 	{
-		i_fd = open( filename, 0 );
+		i_fd = open( filename, O_BINARY );
 		p_data = (uint8_t *) malloc( sizeof( uint8_t ) * 188 );
 		if( !p_data )
 			goto out_of_memory;
