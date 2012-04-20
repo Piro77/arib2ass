@@ -464,14 +464,20 @@ static mtime_t GetPCR( uint8_t *p )
  *****************************************************************************/
 static void usage( char *name )
 {
-	printf( "Usage: %s [--file <filename>|--help]\n", name );
-	printf( "       %s [-f <filename>|-h]\n", name );
+	printf( "Usage: %s [--file <filename>|--help|--output <ofilename>]\n", name );
+	printf( "       %s [-f <filename>|-h|-o <ofilename>]\n", name );
 	printf( "\n" );
 	printf( "       %s --help\n", name );
-	printf( "       %s --file <filename>\n", name );
+	printf( "       %s --file <filename> --output <ofilename>\n", name );
 	printf( "Arguments:\n" );
 	printf( "file   : read MPEG2-TS stream from file\n" );
+	printf( "output : output ASS filename \n" );
 	printf( "help   : print this help message\n" );
+}
+static char *outputfilename = NULL;
+char *getoutputfilename()
+{
+	return outputfilename;
 }
 
 /*****************************************************************************
@@ -479,11 +485,12 @@ static void usage( char *name )
  *****************************************************************************/
 int main(int i_argc, char* pa_argv[])
 {
-	const char* const short_options = "hf:v";
+	const char* const short_options = "hf:vo:";
 	const struct option long_options[] =
 	{
 		{ "help",       0, NULL, 'h' },
 		{ "file",       1, NULL, 'f' },
+		{ "output",     1, NULL, 'o' },
 		{ "verbose",    0, NULL, 'v' },
 		{ NULL,         0, NULL, 0 }
 	};
@@ -504,6 +511,7 @@ int main(int i_argc, char* pa_argv[])
 	ts_stream_t *p_stream = NULL;
 	int i_len = 0;
 	int b_verbose = 0;
+	int i = 0;
 
 	/* parser commandline arguments */
 	do {
@@ -512,6 +520,9 @@ int main(int i_argc, char* pa_argv[])
 		{
 			case 'f':
 				filename = strdup( optarg );
+				break;
+			case 'o':
+				outputfilename = strdup( optarg );
 				break;
 			case 'h':
 				usage( pa_argv[0] );
@@ -565,7 +576,6 @@ int main(int i_argc, char* pa_argv[])
 	p_stream->pat.handle = dvbpsi_AttachPAT( DumpPAT, p_stream );
 	while( i_len > 0 )
 	{
-		int i = 0;
 		vlc_bool_t b_first = VLC_FALSE;
 
 		i_bytes += i_len;
@@ -791,6 +801,11 @@ printf("refpcr %s pid 0x%x\n",dumpts(i_pcr),i_pid);
 	if( p_data )    free( p_data );
 	if( filename )  free( filename );
 
+	for(i=0;i<8192;i++) {
+		ts_pid_t *p_pid = &p_stream->pid[i];
+		if (p_pid && p_pid->decoder)
+			dec_close(p_pid->decoder);
+	}
 	/* free other stuff first ;-)*/
 	if( p_stream )  free( p_stream );
 	return EXIT_SUCCESS;
