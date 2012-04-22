@@ -1081,7 +1081,14 @@ static void dumpheader(decoder_t *p_dec)
       }
     }
     else {
-        p_sys->outputfp = stdout;
+       char *outputfile;
+       asprintf(&outputfile,"%s.ass",p_sys->inputfile);
+       p_sys->outputfp = vlc_fopen(outputfile,"w");
+       if (p_sys->outputfp == NULL) {
+         fprintf(stderr,"output [%s] can't open output to stdout\n",outputfile);
+         p_sys->outputfp = stdout;
+       }
+       free(outputfile);
     }
     FILE *fp = vlc_fopen( "assheader.ini", "r" );
     if (fp == NULL) {

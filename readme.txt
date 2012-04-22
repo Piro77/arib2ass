@@ -7,7 +7,10 @@
   https://skydrive.live.com/?cid=2DAB0D8D07FA4EBF&id=2DAB0D8D07FA4EBF%21117
   にあるvlc用のデコーダ単独で使えるようにしたものです。
 
-  arib2ass --file input.ts --output output.ass
+  arib2ass --file input.ts
+
+  変換したASSをinput.ts.assとして出力します。
+
 
   drcs_conv.ini drcs外字の書き換えファイルです。詳細は上記のURLを参照。
                 基本は外字のハッシュ=書き換えたいコードとなります。

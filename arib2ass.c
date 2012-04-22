@@ -474,6 +474,7 @@ static void usage( char *name )
 	printf( "       %s --file <filename> --output <ofilename>\n", name );
 	printf( "Arguments:\n" );
 	printf( "file   : read MPEG2-TS stream from file\n" );
+	printf( "         default output ASS file <filename>.ass \n" );
 	printf( "output : output ASS filename \n" );
 	printf( "help   : print this help message\n" );
 	printf( "debug  : output debug info to <filename>.asslog \n" );
