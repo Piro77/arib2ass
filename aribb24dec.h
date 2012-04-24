@@ -301,6 +301,7 @@ static int decoder_push( arib_decoder_t *decoder, unsigned int uc )
 
     /* Ignore making new region */
     bool b_skip_making_new_region = false;
+#if 0
     if( decoder->b_need_next_region )
     {
         switch( uc )
@@ -318,7 +319,7 @@ static int decoder_push( arib_decoder_t *decoder, unsigned int uc )
                 break;
         }
     }
-
+#endif
     /* Adjust for somme characters */
     int i_veradj;
     int i_horadj;
