@@ -1148,6 +1148,7 @@ static void free_assregion( ass_region_buf_t *p_ass)
 		while(asstmp->p_next)
 		{
 			ass_region_buf_t *p;
+			p = asstmp;
 			asstmp = asstmp->p_next;
 			free(p);
 		}
