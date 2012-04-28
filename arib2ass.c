@@ -762,8 +762,9 @@ printf("refpcr %s pid 0x%x\n",dumpts(i_pcr),i_pid);
 							if( p_pid->i_pes_size > 0 &&
 									p_pid->i_pes_gathered >= p_pid->i_pes_size )
 							{
-								p_pid->p_block->p_buffer = realloc(p_pid->p_block->p_buffer,i_size + 1);
-								p_pid->p_block->p_buffer[i_size+1]=0;
+								/* XXX overflow??? */
+								p_pid->p_block->p_buffer = realloc(p_pid->p_block->p_buffer,p_pid->p_block->i_buffer * 2);
+								p_pid->p_block->p_buffer[p_pid->p_block->i_buffer+1]=0;
 								p_pid->p_block->i_buffer += 1;
 								if (p_pid->decoder) {
 									p_pid->decoder->pf_decode_sub(p_pid->decoder,&p_pid->p_block);
@@ -792,7 +793,8 @@ printf("refpcr %s pid 0x%x\n",dumpts(i_pcr),i_pid);
 						if( p_pid->i_pes_size > 0 &&
 								p_pid->i_pes_gathered >= p_pid->i_pes_size )
 						{
-							p_pid->p_block->p_buffer = realloc(p_pid->p_block->p_buffer,p_pid->p_block->i_buffer + 1);
+							/* XXX overflow??? */
+							p_pid->p_block->p_buffer = realloc(p_pid->p_block->p_buffer,p_pid->p_block->i_buffer * 2);
 							p_pid->p_block->p_buffer[p_pid->p_block->i_buffer+1]=0;
 							p_pid->p_block->i_buffer += 1;
 							if (p_pid->decoder) {
@@ -821,11 +823,19 @@ printf("refpcr %s pid 0x%x\n",dumpts(i_pcr),i_pid);
 
 	for(i=0;i<8192;i++) {
 		ts_pid_t *p_pid = &p_stream->pid[i];
-		if (p_pid && p_pid->decoder)
+		if (p_pid && p_pid->decoder) {
 			dec_close(p_pid->decoder);
+			free(p_pid->decoder);
+		}
+		if (p_pid && p_pid->p_block)
+			free(p_pid->p_block);
 	}
 	/* free other stuff first ;-)*/
-	if( p_stream )  free( p_stream );
+	if( p_stream )  {
+		free( p_stream->p_pcrs );
+		free( p_stream->p_pos );
+		free( p_stream );
+	}
 	return EXIT_SUCCESS;
 
 out_of_memory:
