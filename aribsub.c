@@ -109,7 +109,7 @@ static void *Decode( void *dec, block_t **pp_block )
 {
     decoder_t *p_dec = (decoder_t *)dec;
     block_t *p_block;
-    
+
     decoder_sys_t *p_sys = p_dec->p_sys;
 
     if( ( pp_block == NULL ) || ( *pp_block == NULL ) )
@@ -149,10 +149,10 @@ void *dec_open(void *p_this)
     p_sys->inputfile = (char *)getinputfilename();
     if (getdebugflg())
     {
-       char *debugfile;
-       asprintf(&debugfile,"%s.asslog",p_sys->inputfile);
-       p_sys->debugfp = vlc_fopen(debugfile,"w");
-       free(debugfile);
+        char *debugfile;
+        asprintf(&debugfile,"%s.asslog",p_sys->inputfile);
+        p_sys->debugfp = vlc_fopen(debugfile,"w");
+        free(debugfile);
     }
 
 }
@@ -160,7 +160,7 @@ void *dec_close(void *p_this)
 {
     decoder_t *p_dec = (decoder_t *)p_this;
     block_t *p_block;
-    
+
     decoder_sys_t *p_sys = p_dec->p_sys;
 
     if (p_sys->outputfp) fclose(p_sys->outputfp);
@@ -316,7 +316,7 @@ static void create_arib_basedir( decoder_t *p_dec )
     {
         return;
     }
-    
+
     struct stat st;
     vlc_stat( psz_arib_base_dir, &st );
     if( !S_ISDIR(st.st_mode) && !S_ISREG(st.st_mode) )
@@ -338,7 +338,7 @@ static void create_arib_datadir( decoder_t *p_dec )
     {
         return;
     }
-    
+
     struct stat st;
     vlc_stat( psz_arib_data_dir, &st );
     if( !S_ISDIR(st.st_mode) && !S_ISREG(st.st_mode) )
@@ -417,7 +417,7 @@ static void load_drcs_conversion_table( decoder_t *p_dec )
         {
             continue;
         }
-        
+
         drcs_conversion_t *p_next = (drcs_conversion_t*) malloc(
                 sizeof(drcs_conversion_t) );
         if( p_next == NULL )
@@ -524,14 +524,14 @@ static void save_drcs_pattern_data_image(
     }
 
     png_set_IHDR( png_ptr,
-                  info_ptr,
-                  i_width,
-                  i_height,
-                  1,
-                  PNG_COLOR_TYPE_PALETTE,
-                  PNG_INTERLACE_NONE,
-                  PNG_COMPRESSION_TYPE_DEFAULT,
-                  PNG_FILTER_TYPE_DEFAULT );
+            info_ptr,
+            i_width,
+            i_height,
+            1,
+            PNG_COLOR_TYPE_PALETTE,
+            PNG_INTERLACE_NONE,
+            PNG_COMPRESSION_TYPE_DEFAULT,
+            PNG_FILTER_TYPE_DEFAULT );
 
     png_bytepp pp_image;
     pp_image = png_malloc( png_ptr, i_height * sizeof(png_bytep) );
@@ -619,11 +619,11 @@ static void save_drcs_pattern(
     // already saved?
     if (!found) {
         for(int i=0;i<10;i++) {
-           if (strcmp(p_sys->drcs_hash_table[i],psz_hash) == 0)
-           {
-               found = true;
-               break;
-           }
+            if (strcmp(p_sys->drcs_hash_table[i],psz_hash) == 0)
+            {
+                found = true;
+                break;
+            }
         }
     }
 
@@ -635,15 +635,15 @@ static void save_drcs_pattern(
     if (!found)
     {
         save_drcs_pattern_data_image( p_dec, psz_hash,
-            i_width, i_height, i_depth, p_patternData );
+                i_width, i_height, i_depth, p_patternData );
     }
 
     free( psz_hash );
 }
 
 static void parse_data_unit_staement_body( decoder_t *p_dec,
-                                           uint8_t i_data_unit_parameter,
-                                           uint32_t i_data_unit_size )
+        uint8_t i_data_unit_parameter,
+        uint32_t i_data_unit_size )
 {
     VLC_UNUSED(i_data_unit_parameter);
     decoder_sys_t *p_sys = p_dec->p_sys;
@@ -669,8 +669,8 @@ static void parse_data_unit_staement_body( decoder_t *p_dec,
 }
 
 static void parse_data_unit_DRCS( decoder_t *p_dec,
-                                  uint8_t i_data_unit_parameter,
-                                  uint32_t i_data_unit_size )
+        uint8_t i_data_unit_parameter,
+        uint32_t i_data_unit_size )
 {
     VLC_UNUSED(i_data_unit_parameter); VLC_UNUSED(i_data_unit_size);
     decoder_sys_t *p_sys = p_dec->p_sys;
@@ -803,10 +803,10 @@ static void parse_data_unit_DRCS( decoder_t *p_dec,
 
 #ifdef ARIBSUB_GEN_DRCS_DATA
                 save_drcs_pattern( p_dec, i_width, i_height, i_depth + 2,
-                                   p_drcs_pattern_data->p_patternData );
+                        p_drcs_pattern_data->p_patternData );
 #else
                 save_drcs_pattern( p_dec, i_width, i_height, i_depth + 2,
-                                   p_patternData );
+                        p_patternData );
                 free( p_patternData );
 #endif //ARIBSUB_GEN_DRCS_DATA
             }
@@ -859,8 +859,8 @@ static void parse_data_unit_DRCS( decoder_t *p_dec,
 }
 
 static void parse_data_unit_others( decoder_t *p_dec,
-                                    uint8_t i_data_unit_parameter,
-                                    uint32_t i_data_unit_size )
+        uint8_t i_data_unit_parameter,
+        uint32_t i_data_unit_size )
 {
     VLC_UNUSED(i_data_unit_parameter);
     decoder_sys_t *p_sys = p_dec->p_sys;
@@ -895,21 +895,21 @@ static void parse_data_unit( decoder_t *p_dec )
     if( i_data_unit_parameter == 0x20 )
     {
         parse_data_unit_staement_body( p_dec,
-                                       i_data_unit_parameter,
-                                       i_data_unit_size );
+                i_data_unit_parameter,
+                i_data_unit_size );
     }
     else if( i_data_unit_parameter == 0x30 ||
-             i_data_unit_parameter == 0x31 )
+            i_data_unit_parameter == 0x31 )
     {
         parse_data_unit_DRCS( p_dec,
-                              i_data_unit_parameter,
-                              i_data_unit_size );
+                i_data_unit_parameter,
+                i_data_unit_size );
     }
     else
     {
         parse_data_unit_others( p_dec,
-                                i_data_unit_parameter,
-                                i_data_unit_size );
+                i_data_unit_parameter,
+                i_data_unit_size );
     }
 }
 
@@ -938,8 +938,8 @@ static void parse_caption_management_data( decoder_t *p_dec )
         bs_skip( &p_sys->bs, 1 ); /* Reserved */
         uint8_t i_DMF = bs_read( &p_sys->bs, 4 );
         if( i_DMF == 0x0C /* 1100 */ ||
-            i_DMF == 0x0D /* 1101 */ ||
-            i_DMF == 0x0E /* 1110 */ )
+                i_DMF == 0x0D /* 1101 */ ||
+                i_DMF == 0x0E /* 1110 */ )
         {
             uint8_t i_DC = bs_read( &p_sys->bs, 8 );
             VLC_UNUSED(i_DC);
@@ -984,7 +984,7 @@ static void parse_caption_statement_data( decoder_t *p_dec )
     if( i_TMD == 0x01 /* 01 */ || i_TMD == 0x02 /* 10 */ )
     {
         uint64_t i_STM = ((uint64_t) bs_read( &p_sys->bs, 32 ) << 4) &
-                                     bs_read( &p_sys->bs, 4 );
+            bs_read( &p_sys->bs, 4 );
         VLC_UNUSED(i_STM);
         bs_skip( &p_sys->bs, 4 ); /* Reserved */
     }
@@ -996,7 +996,7 @@ static void parse_caption_statement_data( decoder_t *p_dec )
     {
         p_sys->psz_subtitle_data =
             (unsigned char*)malloc( sizeof(unsigned char) *
-                (i_data_unit_loop_length + 1) );
+                    (i_data_unit_loop_length + 1) );
     }
     while( p_sys->i_data_unit_size < i_data_unit_loop_length )
     {
@@ -1058,7 +1058,7 @@ static void parse_arib_pes( decoder_t *p_dec )
     VLC_UNUSED(i_reserved_future_use);
     uint8_t i_PES_data_packet_header_length= bs_read( &p_sys->bs, 4 );
 
-     /* skip PES_data_private_data_byte */
+    /* skip PES_data_private_data_byte */
     bs_skip( &p_sys->bs, i_PES_data_packet_header_length );
 
     parse_data_group( p_dec );
@@ -1068,7 +1068,7 @@ static bool isallspace(char *buf,int len)
 {
     int i;
     for(i=0;i<len;i++) {
-      if (buf[i]!=0x20) return false;
+        if (buf[i]!=0x20) return false;
     }
     return true;
 }
@@ -1077,21 +1077,21 @@ static void dumpheader(decoder_t *p_dec)
     decoder_sys_t *p_sys = p_dec->p_sys;
     char buf[1024];
     if (p_sys->outputfile) {
-      p_sys->outputfp = vlc_fopen(p_sys->outputfile,"w");
-      if (p_sys->outputfp == NULL) {
-        fprintf(stderr,"output [%s] can't open output to stdout\n",p_sys->outputfile);
-        p_sys->outputfp = stdout;
-      }
+        p_sys->outputfp = vlc_fopen(p_sys->outputfile,"w");
+        if (p_sys->outputfp == NULL) {
+            fprintf(stderr,"output [%s] can't open output to stdout\n",p_sys->outputfile);
+            p_sys->outputfp = stdout;
+        }
     }
     else {
-       char *outputfile;
-       asprintf(&outputfile,"%s.ass",p_sys->inputfile);
-       p_sys->outputfp = vlc_fopen(outputfile,"w");
-       if (p_sys->outputfp == NULL) {
-         fprintf(stderr,"output [%s] can't open output to stdout\n",outputfile);
-         p_sys->outputfp = stdout;
-       }
-       free(outputfile);
+        char *outputfile;
+        asprintf(&outputfile,"%s.ass",p_sys->inputfile);
+        p_sys->outputfp = vlc_fopen(outputfile,"w");
+        if (p_sys->outputfp == NULL) {
+            fprintf(stderr,"output [%s] can't open output to stdout\n",outputfile);
+            p_sys->outputfp = stdout;
+        }
+        free(outputfile);
     }
     FILE *fp = vlc_fopen( "assheader.ini", "r" );
     if (fp == NULL) {
@@ -1115,184 +1115,184 @@ static void dumpheader(decoder_t *p_dec)
 }
 static void dumpregion(decoder_t *p_dec,ass_region_buf_t *ass,char *p_stop)
 {
-        decoder_sys_t *p_sys = p_dec->p_sys;
-	static bool dumpstart = true;
-	char *p2;
-	if (dumpstart) {
-		dumpheader(p_dec);
-		dumpstart=false;
-	}
-	for(ass_region_buf_t *p = ass;p;p = p->p_next) {
-		if (p->b_ephemer) {
-			asprintf(&p2,p->p_buf,p_stop);
-			fprintf(p_sys->outputfp, "%s",p2);
-			free(p2);
-		}
-		else {
-			fprintf(p_sys->outputfp, "%s",p->p_buf);
-		}
-		free(p->p_buf);
-		//free(p);
-	}
+    decoder_sys_t *p_sys = p_dec->p_sys;
+    static bool dumpstart = true;
+    char *p2;
+    if (dumpstart) {
+        dumpheader(p_dec);
+        dumpstart=false;
+    }
+    for(ass_region_buf_t *p = ass;p;p = p->p_next) {
+        if (p->b_ephemer) {
+            asprintf(&p2,p->p_buf,p_stop);
+            fprintf(p_sys->outputfp, "%s",p2);
+            free(p2);
+        }
+        else {
+            fprintf(p_sys->outputfp, "%s",p->p_buf);
+        }
+        free(p->p_buf);
+        //free(p);
+    }
 }
 static void free_assregion( ass_region_buf_t *p_ass)
 {
-	ass_region_buf_t *asstmp;
-	asstmp = p_ass;
-	if (asstmp->p_next == NULL)
-	{
-		free(asstmp);
-	}
-	else
-	{
-		while(asstmp->p_next)
-		{
-			ass_region_buf_t *p;
-			p = asstmp;
-			asstmp = asstmp->p_next;
-			free(p);
-		}
-	}
+    ass_region_buf_t *asstmp;
+    asstmp = p_ass;
+    if (asstmp->p_next == NULL)
+    {
+        free(asstmp);
+    }
+    else
+    {
+        while(asstmp->p_next)
+        {
+            ass_region_buf_t *p;
+            p = asstmp;
+            asstmp = asstmp->p_next;
+            free(p);
+        }
+    }
 }
 static void pushregion(decoder_t  *p_dec,mtime_t i_start,mtime_t i_stop)
 {
     arib_buf_region_t *p_region = p_dec->p_sys->arib_decoder.p_region;
-	static ass_region_buf_t *ass=NULL;
-	ass_region_buf_t *asstmp;
-	char *p1,*p2,*p3,*p4,*style;
-	char tmp[512];
-	p1 = dumpts(i_start);
-	if (i_start == i_stop) {
-		asprintf(&p2,"%s","%s");
-	}
-	else {
-		p2 = dumpts(i_stop);
-	}
-	if (ass) {
-		dumpregion(p_dec,ass,p1);
-		free_assregion(ass);
-		ass = NULL;
-	}
-	asstmp = NULL;
-	for(arib_buf_region_t *p_buf_region = p_region;p_buf_region;p_buf_region = p_buf_region->p_next) {
-		int i_size = p_buf_region->p_end - p_buf_region->p_start;
-		
-		strncpy(tmp,p_buf_region->p_start,i_size);
-		tmp[i_size]=0;
-                // skip space
-                if ((i_size == 0) || (i_size == 3 && strcmp(tmp,"　")==0) || isallspace(tmp,i_size))
-                {
-                    continue;
-                }
-		if (p_buf_region->i_fontheight == 18) {
-			style = "Rubi";
-		}
-		else {
-			if (p_buf_region->i_fontwidth == 36)
-				style = "Default";
-			else
-				style = "Half";
-		}
-		if (p_buf_region->i_foreground_color == 0xffffff) {
-			p4 = NULL;
-			asprintf(&p3,"Dialogue: 0,%s,%s,%s,,0000,0000,0000,,{\\pos(%d,%d)}%s\r\n",
-				p1,p2,style,
-				p_buf_region->i_charleft - (p_buf_region->i_fontwidth + p_buf_region->i_horint) ,
-				p_buf_region->i_charbottom - (p_buf_region->i_fontheight + p_buf_region->i_verint),
-				tmp);
-		}
-		else {
-			asprintf(&p3,"Dialogue: 0,%s,%s,%s,,0000,0000,0000,,{\\pos(%d,%d)\\c&H%06x&}%s\r\n",
-				p1,p2,style,
-				p_buf_region->i_charleft - (p_buf_region->i_fontwidth + p_buf_region->i_horint) ,
-				p_buf_region->i_charbottom - (p_buf_region->i_fontheight + p_buf_region->i_verint),
-				p_buf_region->i_foreground_color,tmp);
-		}
-		if (ass == NULL) {
-			asstmp = ass = calloc(1,sizeof(ass_region_buf_t));
-		}
-		else {
-			if (asstmp == NULL) {
-				ass_region_buf_t *p;
-				for(p = ass;p;p = p->p_next)
-					asstmp = p;
-			}
-			asstmp->p_next = calloc(1,sizeof(ass_region_buf_t));
-			asstmp = asstmp->p_next;
-		}
-		asstmp->p_buf = strdup(p3);
-		asstmp->b_ephemer = (i_start == i_stop);
-		free(p3);
-		//if (p4) free(p4);
-	}
-	if (i_start != i_stop && ass) {
-		dumpregion(p_dec,ass,p2);
-		free_assregion(ass);
-		ass = NULL;
-	}
-	free(p2);
-	free(p1);
+    static ass_region_buf_t *ass=NULL;
+    ass_region_buf_t *asstmp;
+    char *p1,*p2,*p3,*p4,*style;
+    char tmp[512];
+    p1 = dumpts(i_start);
+    if (i_start == i_stop) {
+        asprintf(&p2,"%s","%s");
+    }
+    else {
+        p2 = dumpts(i_stop);
+    }
+    if (ass) {
+        dumpregion(p_dec,ass,p1);
+        free_assregion(ass);
+        ass = NULL;
+    }
+    asstmp = NULL;
+    for(arib_buf_region_t *p_buf_region = p_region;p_buf_region;p_buf_region = p_buf_region->p_next) {
+        int i_size = p_buf_region->p_end - p_buf_region->p_start;
+
+        strncpy(tmp,p_buf_region->p_start,i_size);
+        tmp[i_size]=0;
+        // skip space
+        if ((i_size == 0) || (i_size == 3 && strcmp(tmp,"　")==0) || isallspace(tmp,i_size))
+        {
+            continue;
+        }
+        if (p_buf_region->i_fontheight == 18) {
+            style = "Rubi";
+        }
+        else {
+            if (p_buf_region->i_fontwidth == 36)
+                style = "Default";
+            else
+                style = "Half";
+        }
+        if (p_buf_region->i_foreground_color == 0xffffff) {
+            p4 = NULL;
+            asprintf(&p3,"Dialogue: 0,%s,%s,%s,,0000,0000,0000,,{\\pos(%d,%d)}%s\r\n",
+                    p1,p2,style,
+                    p_buf_region->i_charleft - (p_buf_region->i_fontwidth + p_buf_region->i_horint) ,
+                    p_buf_region->i_charbottom - (p_buf_region->i_fontheight + p_buf_region->i_verint),
+                    tmp);
+        }
+        else {
+            asprintf(&p3,"Dialogue: 0,%s,%s,%s,,0000,0000,0000,,{\\pos(%d,%d)\\c&H%06x&}%s\r\n",
+                    p1,p2,style,
+                    p_buf_region->i_charleft - (p_buf_region->i_fontwidth + p_buf_region->i_horint) ,
+                    p_buf_region->i_charbottom - (p_buf_region->i_fontheight + p_buf_region->i_verint),
+                    p_buf_region->i_foreground_color,tmp);
+        }
+        if (ass == NULL) {
+            asstmp = ass = calloc(1,sizeof(ass_region_buf_t));
+        }
+        else {
+            if (asstmp == NULL) {
+                ass_region_buf_t *p;
+                for(p = ass;p;p = p->p_next)
+                    asstmp = p;
+            }
+            asstmp->p_next = calloc(1,sizeof(ass_region_buf_t));
+            asstmp = asstmp->p_next;
+        }
+        asstmp->p_buf = strdup(p3);
+        asstmp->b_ephemer = (i_start == i_stop);
+        free(p3);
+        //if (p4) free(p4);
+    }
+    if (i_start != i_stop && ass) {
+        dumpregion(p_dec,ass,p2);
+        free_assregion(ass);
+        ass = NULL;
+    }
+    free(p2);
+    free(p1);
 }
 static void dumparib(decoder_t *p_dec,mtime_t i_pts)
 {
-        decoder_sys_t *p_sys = p_dec->p_sys;
-	int retlen;
-	char *tostr;
-	mtime_t i_stop;
-	static mtime_t i_prev_pts;
-	static arib_decoder_t *prev_decoder=NULL;
+    decoder_sys_t *p_sys = p_dec->p_sys;
+    int retlen;
+    char *tostr;
+    mtime_t i_stop;
+    static mtime_t i_prev_pts;
+    static arib_decoder_t *prev_decoder=NULL;
 
-	if (p_sys->psz_subtitle_data == NULL) return;
+    if (p_sys->psz_subtitle_data == NULL) return;
 
-	tostr = malloc((p_sys->i_subtitle_data_size*3)+1);
-	tostr[0]=0;
-        arib_initialize_decoder(&p_sys->arib_decoder,1);
+    tostr = malloc((p_sys->i_subtitle_data_size*3)+1);
+    tostr[0]=0;
+    arib_initialize_decoder(&p_sys->arib_decoder,1);
 
-	p_sys->arib_decoder.i_drcs_num = p_sys->i_drcs_num;
+    p_sys->arib_decoder.i_drcs_num = p_sys->i_drcs_num;
 
-	for( int i = 0; i < p_sys->i_drcs_num; i++ )
-	{
-		strncpy( p_sys->arib_decoder.drcs_hash_table[i],
-		p_sys->drcs_hash_table[i], 32 );
-		p_sys->arib_decoder.drcs_hash_table[i][32] = '\0';
-	}
-	p_sys->arib_decoder.p_drcs_conv = p_sys->p_drcs_conv;
+    for( int i = 0; i < p_sys->i_drcs_num; i++ )
+    {
+        strncpy( p_sys->arib_decoder.drcs_hash_table[i],
+                p_sys->drcs_hash_table[i], 32 );
+        p_sys->arib_decoder.drcs_hash_table[i][32] = '\0';
+    }
+    p_sys->arib_decoder.p_drcs_conv = p_sys->p_drcs_conv;
 
-        retlen = arib_decode_buffer( &p_sys->arib_decoder,
-                                               p_sys->psz_subtitle_data,
-                                               p_sys->i_subtitle_data_size,
-                                               tostr,
-                                               p_sys->i_subtitle_data_size*3 );
-        if (retlen > 0) tostr[retlen]=0;
-	//i_stop = i_pts + (int64_t)(p_sys->arib_decoder.i_control_time * 1000 * 90 );
-	i_stop = i_pts + (int64_t)(p_sys->arib_decoder.i_control_time * 1000 * 9);
+    retlen = arib_decode_buffer( &p_sys->arib_decoder,
+            p_sys->psz_subtitle_data,
+            p_sys->i_subtitle_data_size,
+            tostr,
+            p_sys->i_subtitle_data_size*3 );
+    if (retlen > 0) tostr[retlen]=0;
+    //i_stop = i_pts + (int64_t)(p_sys->arib_decoder.i_control_time * 1000 * 90 );
+    i_stop = i_pts + (int64_t)(p_sys->arib_decoder.i_control_time * 1000 * 9);
 
-	if (p_sys->arib_decoder.p_region && p_sys->debugfp) {
-		const unsigned char* start = (const unsigned char*)p_sys->psz_subtitle_data;
-		const unsigned char* end = (const unsigned char*)p_sys->psz_subtitle_data + p_sys->i_subtitle_data_size;
-    		char *dumpdata,*pts,dumpwk[10];
-    		dumpdata = malloc((p_sys->i_subtitle_data_size * 4)+1);
-    		dumpdata[0]=NULL;
-		while( start < end )
-		{
-			sprintf(dumpwk,"%02x ",*start++);
-			strcat(dumpdata,dumpwk);
-		}
-		pts = dumpts(i_pts);
-		fprintf(p_sys->debugfp,"%s str [%s]\r\n",pts,tostr);
-		fprintf(p_sys->debugfp,"dmp [%s]\r\n",dumpdata);
-		
-		free(dumpdata);
-		free(pts);
-	}
+    if (p_sys->arib_decoder.p_region && p_sys->debugfp) {
+        const unsigned char* start = (const unsigned char*)p_sys->psz_subtitle_data;
+        const unsigned char* end = (const unsigned char*)p_sys->psz_subtitle_data + p_sys->i_subtitle_data_size;
+        char *dumpdata,*pts,dumpwk[10];
+        dumpdata = malloc((p_sys->i_subtitle_data_size * 4)+1);
+        dumpdata[0]=NULL;
+        while( start < end )
+        {
+            sprintf(dumpwk,"%02x ",*start++);
+            strcat(dumpdata,dumpwk);
+        }
+        pts = dumpts(i_pts);
+        fprintf(p_sys->debugfp,"%s str [%s]\r\n",pts,tostr);
+        fprintf(p_sys->debugfp,"dmp [%s]\r\n",dumpdata);
 
-	if (p_sys->arib_decoder.p_region) {
-		pushregion(p_dec,i_pts,i_stop);
-	}
-	arib_finalize_decoder(&p_sys->arib_decoder);
-	p_sys->i_drcs_num = 0;
+        free(dumpdata);
+        free(pts);
+    }
 
-       if (tostr) free(tostr);
+    if (p_sys->arib_decoder.p_region) {
+        pushregion(p_dec,i_pts,i_stop);
+    }
+    arib_finalize_decoder(&p_sys->arib_decoder);
+    p_sys->i_drcs_num = 0;
+
+    if (tostr) free(tostr);
 
 }
 

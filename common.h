@@ -60,24 +60,24 @@ struct block_t
 typedef struct decoder_sys_t     decoder_sys_t;
 
 typedef struct {
-  void  *      ( * pf_decode_sub)   ( void  *, block_t **);
-  decoder_sys_t *p_sys;
+    void  *      ( * pf_decode_sub)   ( void  *, block_t **);
+    decoder_sys_t *p_sys;
 }decoder_t;
 
 static char * dumpts(mtime_t ts)
 {
-        int sec,min,hour;
-        char *buf;
-        sec = ts / 90000;
-        ts -= (mtime_t)sec * (mtime_t)90000;
-        min = sec / 60;
-        sec -= min * 60;
-        hour = min / 60;
-        min -= hour * 60;
-        //asprintf(&buf,"%02d:%02d:%02d.%02d", hour, min%60, sec%60, ts/900);
-	buf=malloc(512);
-        snprintf(buf,512,"%02d:%02d:%02d.%02d", hour, min%60, sec%60, ts/900);
-        return buf;
+    int sec,min,hour;
+    char *buf;
+    sec = ts / 90000;
+    ts -= (mtime_t)sec * (mtime_t)90000;
+    min = sec / 60;
+    sec -= min * 60;
+    hour = min / 60;
+    min -= hour * 60;
+    //asprintf(&buf,"%02d:%02d:%02d.%02d", hour, min%60, sec%60, ts/900);
+    buf=malloc(512);
+    snprintf(buf,512,"%02d:%02d:%02d.%02d", hour, min%60, sec%60, ts/900);
+    return buf;
 }
 
 

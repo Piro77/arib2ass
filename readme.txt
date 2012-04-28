@@ -13,7 +13,7 @@
   arib2ass --file input.ts --output output.ass
   変換したASSをoutput.assとして出力します。
 
-  arib2ass --file input.ts -d
+  arib2ass --file input.ts --debug
   デバッグログをinput.ts.asslogファイルに出力します。
 
 
