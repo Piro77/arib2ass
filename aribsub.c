@@ -102,6 +102,8 @@ static void dumpheader(decoder_t *);
 static void dumpregion(decoder_t *,ass_region_buf_t *,char *);
 static void pushregion(decoder_t *,mtime_t,mtime_t);
 static void dumparib(decoder_t *,mtime_t);
+static void free_all(decoder_t *);
+static void free_assregion(ass_region_buf_t *);
 
 static void *Decode( void *dec, block_t **pp_block )
 {
@@ -164,8 +166,8 @@ void *dec_close(void *p_this)
     if (p_sys->outputfp) fclose(p_sys->outputfp);
     if (p_sys->debugfp) fclose(p_sys->debugfp);
 
-    // XXX need free
-
+    free_all(p_dec);
+    free(p_sys);
 }
 #if 0
 static subpicture_t *render( decoder_t *, block_t * );
@@ -210,6 +212,7 @@ static int Open( vlc_object_t *p_this )
 
     return VLC_SUCCESS;
 }
+#endif
 static void free_all( decoder_t *p_dec )
 {
     decoder_sys_t *p_sys = p_dec->p_sys;
@@ -229,7 +232,7 @@ static void free_all( decoder_t *p_dec )
     }
     p_sys->p_drcs_conv = NULL;
 }
-
+#if 0
 /*****************************************************************************
  * Close:
  *****************************************************************************/
@@ -1132,10 +1135,27 @@ static void dumpregion(decoder_t *p_dec,ass_region_buf_t *ass,char *p_stop)
 		//free(p);
 	}
 }
+static void free_assregion( ass_region_buf_t *p_ass)
+{
+	ass_region_buf_t *asstmp;
+	asstmp = p_ass;
+	if (asstmp->p_next == NULL)
+	{
+		free(asstmp);
+	}
+	else
+	{
+		while(asstmp->p_next)
+		{
+			ass_region_buf_t *p;
+			asstmp = asstmp->p_next;
+			free(p);
+		}
+	}
+}
 static void pushregion(decoder_t  *p_dec,mtime_t i_start,mtime_t i_stop)
 {
     arib_buf_region_t *p_region = p_dec->p_sys->arib_decoder.p_region;
-	const char *cfmt="\\c&H%06x&";
 	static ass_region_buf_t *ass=NULL;
 	ass_region_buf_t *asstmp;
 	char *p1,*p2,*p3,*p4,*style;
@@ -1149,7 +1169,7 @@ static void pushregion(decoder_t  *p_dec,mtime_t i_start,mtime_t i_stop)
 	}
 	if (ass) {
 		dumpregion(p_dec,ass,p1);
-		free(ass);
+		free_assregion(ass);
 		ass = NULL;
 	}
 	asstmp = NULL;
@@ -1181,12 +1201,11 @@ static void pushregion(decoder_t  *p_dec,mtime_t i_start,mtime_t i_stop)
 				tmp);
 		}
 		else {
-			asprintf(&p4,cfmt,p_buf_region->i_foreground_color);
-			asprintf(&p3,"Dialogue: 0,%s,%s,%s,,0000,0000,0000,,{\\pos(%d,%d)%s}%s\r\n",
+			asprintf(&p3,"Dialogue: 0,%s,%s,%s,,0000,0000,0000,,{\\pos(%d,%d)\\c&H%06x&}%s\r\n",
 				p1,p2,style,
 				p_buf_region->i_charleft - (p_buf_region->i_fontwidth + p_buf_region->i_horint) ,
 				p_buf_region->i_charbottom - (p_buf_region->i_fontheight + p_buf_region->i_verint),
-				p4,tmp);
+				p_buf_region->i_foreground_color,tmp);
 		}
 		if (ass == NULL) {
 			asstmp = ass = calloc(1,sizeof(ass_region_buf_t));
@@ -1203,11 +1222,11 @@ static void pushregion(decoder_t  *p_dec,mtime_t i_start,mtime_t i_stop)
 		asstmp->p_buf = strdup(p3);
 		asstmp->b_ephemer = (i_start == i_stop);
 		free(p3);
-		if (p4) free(p4);
+		//if (p4) free(p4);
 	}
-	if (i_start != i_stop) {
+	if (i_start != i_stop && ass) {
 		dumpregion(p_dec,ass,p2);
-		free(ass);
+		free_assregion(ass);
 		ass = NULL;
 	}
 	free(p2);
