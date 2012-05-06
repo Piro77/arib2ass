@@ -714,7 +714,7 @@ int main(int i_argc, char* pa_argv[])
 
             if( b_unit_start )
             {
-                if (p_pid->p_es) {
+                if (p_pid->p_es && p_pid->p_block) {
                     p_pid->i_pes_size = 0;
                     p_pid->i_pes_gathered = 0;
                     if (p_pid->p_block->p_buffer) {
@@ -723,7 +723,7 @@ int main(int i_argc, char* pa_argv[])
                         p_pid->p_block->p_buffer = 0;
                     }
                 }
-                if (b_payload && p_pid->p_es) {
+                if (b_payload && p_pid->p_es && p_pid->p_block) {
                     //printf("have payload %d offset %d\n",i_pid,p_tmp[i_skip]);
                     int skip2;
                     mtime_t i_pts,i_dts;
@@ -731,8 +731,8 @@ int main(int i_argc, char* pa_argv[])
                         fprintf(stderr,"Invalid header\n");
                     }
                     else {
-                        if( ( header[6]&0xC0 ) == 0x80 ) {
-                            skip2=header[8]+9;
+                        skip2=header[8]+9;
+                        if(( ( header[6]&0xC0 ) == 0x80 ) && (i_size - skip2 > 0)){
                             i_skip = i_skip + skip2;
                             if( header[7]&0x80 )    /* has pts */
                             {
@@ -784,7 +784,7 @@ int main(int i_argc, char* pa_argv[])
             } // unit_start
             else
             {
-                if (b_payload && p_pid->p_es) {
+                if (b_payload && p_pid->p_es && p_pid->p_block) {
                     if( p_pid->p_es == NULL )
                     {
 
