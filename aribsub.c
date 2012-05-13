@@ -1279,7 +1279,7 @@ static void dumparib(decoder_t *p_dec,mtime_t i_pts)
             strcat(dumpdata,dumpwk);
         }
         pts = dumpts(i_pts);
-        fprintf(p_sys->debugfp,"%s str [%s]\r\n",pts,tostr);
+        fprintf(p_sys->debugfp,"pts[%s] control_time [%dms] str [%s]\r\n",pts,p_sys->arib_decoder.i_control_time*100,tostr);
         fprintf(p_sys->debugfp,"dmp [%s]\r\n",dumpdata);
 
         free(dumpdata);
