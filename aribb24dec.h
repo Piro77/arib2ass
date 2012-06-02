@@ -27,6 +27,8 @@
 
 #define DEBUG_ARIBB24DEC 1
 
+#define ADD_HLC_SUPPORT 1
+
 #if 0
 /*****************************************************************************
  * ARIB STD-B24 VOLUME 1 Part 3 Chapter 9.3.1 Caption management data
@@ -202,6 +204,12 @@ typedef struct arib_decoder_s
 
     drcs_conversion_t *p_drcs_conv;
 
+#ifdef ADD_HLC_SUPPORT
+    char i_hlcstate;
+    arib_buf_region_t *p_hlcregion;
+    char *p_hlcbuf;
+#endif
+
     arib_buf_region_t *p_region;
     bool b_need_next_region;
 } arib_decoder_t;
@@ -280,6 +288,47 @@ static inline int u8_uctomb( unsigned char *s, unsigned int uc, int n )
         return u8_uctomb_aux( s, uc, n );
     }
 }
+
+#ifdef ADD_HLC_SUPPORT
+static int decoder_pushhlc( arib_decoder_t *decoder)
+{
+    arib_buf_region_t *p_hlcregion = decoder->p_hlcregion;
+
+    if ((decoder->i_hlcstate & 8) && (decoder->p_hlcregion == NULL))
+    {
+        //start HLC REGION
+        decoder->p_hlcregion = (arib_buf_region_t*) calloc( 1, sizeof(arib_buf_region_t) );
+        if( decoder->p_hlcregion == NULL )
+        {
+            return 0;
+        }
+        p_hlcregion = decoder->p_hlcregion;
+        p_hlcregion->i_charleft = decoder->i_charleft;
+        p_hlcregion->i_charbottom = decoder->i_charbottom;
+        p_hlcregion->i_foreground_color = 0xffffff;
+    }
+    if ((decoder->i_hlcstate & 2) && (decoder->p_hlcregion != NULL) && (decoder->p_hlcbuf == NULL))
+    {
+        //finish HLC REGION
+	int x,y,x2,y2,width,height;
+	x = p_hlcregion->i_charleft;
+	y = p_hlcregion->i_charbottom;
+	x2 = decoder->i_charleft + decoder->i_charwidth;
+	y2 = p_hlcregion->i_charbottom+decoder->i_charheight;
+	width = x2 - x;
+	height  = y2 - y;
+	// {\p1} m 0 0 l 0 width width height 0 height {\p0}
+	asprintf(&decoder->p_hlcbuf,"{\\p1}m 0 0 l %d 0 %d -%d 0 -%d {\\p0}",
+		width,width,height,height);
+	p_hlcregion->i_charleft =  p_hlcregion->i_charleft + (width / 2);
+	p_hlcregion->i_charbottom =  p_hlcregion->i_charbottom + height - (decoder->i_verint / 2);
+	p_hlcregion->p_start = decoder->p_hlcbuf;
+	p_hlcregion->p_end = decoder->p_hlcbuf + strlen(decoder->p_hlcbuf);
+    }
+
+    return 1;
+}
+#endif
 
 static int decoder_push( arib_decoder_t *decoder, unsigned int uc )
 {
@@ -414,6 +463,13 @@ static int decoder_push( arib_decoder_t *decoder, unsigned int uc )
     decoder->ucount -= i_cnt;
 
     char *p_end = decoder->ubuf;
+
+#ifdef ADD_HLC_SUPPORT
+    if (decoder->i_hlcstate > 0)
+    {
+        decoder_pushhlc(decoder);
+    }
+#endif
 
     decoder->i_charleft += decoder->i_charwidth;
 
@@ -1692,18 +1748,18 @@ static const unsigned int decoder_kanji_table[][94] = {
         0x51bc, 0x351f, 0x5307, 0x5361, 0x536c, 0x8a79, 0x20bb7,0x544d,
         0x5496, 0x549c, 0x54a9, 0x550e, 0x554a, 0x5672, 0x56e4, 0x5733,
         0x5734, 0xfa10, 0x5880, 0x59e4, 0x5a23, 0x5a55, 0x5bec, 0xfa11,
-        0x37e2, 0x5eac, 0x5f34, 0x5f45, 0x57b7, 0x6017, 0x0000, 0x6130,
-        0x6624, 0x66c8, 0x66d9, 0x66fa, 0x66fb, 0x0000, 0x0000, 0x6911,
+        0x37e2, 0x5eac, 0x5f34, 0x5f45, 0x57b7, 0x6017, 0xfa6b, 0x6130,
+        0x6624, 0x66c8, 0x66d9, 0x66fa, 0x66fb, 0x6852, 0x9fc4, 0x6911,
         0x693b, 0x6a45, 0x6a91, 0x6adb, 0x233cc,0x233fe,0x235c4,0x6bf1,
         0x6ce0, 0x6d2e, 0xfa45, 0x6dbf, 0x6dca, 0x6df8, 0xfa46, 0x6f5e,
-        0x6ff9, 0x7064, 0x0000, 0x242ee,0x7147, 0x71c1, 0x7200, 0x739f,
+        0x6ff9, 0x7064, 0xfa6c, 0x242ee,0x7147, 0x71c1, 0x7200, 0x739f,
         0x73a8, 0x73c9, 0x73d6, 0x741b, 0x7421, 0xfa4a, 0x7426, 0x742a,
         0x742c, 0x7439, 0x744b, 0x3eda, 0x7575, 0x7581, 0x7772, 0x4093,
-        0x78c8, 0x78e0, 0x7947, 0x79ae, 0x0000, 0x0000,
+        0x78c8, 0x78e0, 0x7947, 0x79ae, 0x9fc6, 0x4103,
     },
     {
-        0x0000, 0x79da, 0x7a1e, 0x7b7f, 0x7c31, 0x4246, 0x7d8b, 0x7fa1,
-        0x8118, 0x813a, 0x0000, 0x82ae, 0x845b, 0x84dc, 0x84ec, 0x8559,
+        0x9fc5, 0x79da, 0x7a1e, 0x7b7f, 0x7c31, 0x4246, 0x7d8b, 0x7fa1,
+        0x8118, 0x813a, 0xfa6d, 0x82ae, 0x845b, 0x84dc, 0x84ec, 0x8559,
         0x85ce, 0x8755, 0x87ec, 0x880b, 0x88f5, 0x89d2, 0x8af6, 0x8dce,
         0x8fbb, 0x8ff6, 0x90dd, 0x9127, 0x912d, 0x91b2, 0x9233, 0x9288,
         0x9321, 0x9348, 0x9592, 0x96de, 0x9903, 0x9940, 0x9ad9, 0x9bd6,
@@ -2225,6 +2281,9 @@ static int decoder_handle_hlc( arib_decoder_t *decoder )
             case 0x4d:
             case 0x4e:
             case 0x4f:
+#ifdef ADD_HLC_SUPPORT
+		        decoder->i_hlcstate = c-0x40;
+#endif
                 return 1;
             default:
                 return 0;
@@ -2789,6 +2848,12 @@ static void arib_initialize_decoder( arib_decoder_t* decoder, bool b_caption )
 #endif
 
     decoder->p_drcs_conv = NULL;
+
+#ifdef ADD_HLC_SUPPORT
+    decoder->i_hlcstate = 0;
+    decoder->p_hlcregion = NULL;
+    decoder->p_hlcbuf = NULL;
+#endif
 
     decoder->p_region = NULL;
     decoder->b_need_next_region = true;

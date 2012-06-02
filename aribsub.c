@@ -1101,6 +1101,7 @@ static void dumpheader(decoder_t *p_dec)
         fprintf(p_sys->outputfp, "Style: Default,和田研中丸ゴシック2004絵文字,36,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,4,0,1,2,2,7,0,0,0,0\r\n");
         fprintf(p_sys->outputfp, "Style:    Half,和田研中丸ゴシック2004絵文字,36,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,50,100,4,0,1,2,2,7,0,0,0,0\r\n");
         fprintf(p_sys->outputfp, "Style:    Rubi,和田研中丸ゴシック2004絵文字,18,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,2,0,1,2,2,7,0,0,0,0\r\n");
+        fprintf(p_sys->outputfp, "Style:     HLC,Arial,20,&HFF000000,&H00000000,&H00FFFFFF,&H80000000,0,0,0,0,100,100,0,0.00,1,2,0,2,0,0,0,1\r\n");
         fprintf(p_sys->outputfp, ";Style: Default,メイリオARIB,55,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,4,0,1,2,2,7,0,0,0,0\r\n");
         fprintf(p_sys->outputfp, ";Style:    Half,メイリオARIB,55,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,50,100,4,0,1,2,2,7,0,0,0,0\r\n");
         fprintf(p_sys->outputfp, ";Style:    Rubi,メイリオARIB,28,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,2,0,1,2,2,7,0,0,0,0\r\n");
@@ -1193,6 +1194,10 @@ static void pushregion(decoder_t  *p_dec,mtime_t i_start,mtime_t i_stop)
             else
                 style = "Half";
         }
+	if (p_buf_region->i_fontheight == 0 && p_buf_region->i_fontheight == 0)
+	{
+		style = "HLC";
+	}
         if (p_buf_region->i_foreground_color == 0xffffff) {
             p4 = NULL;
             asprintf(&p3,"Dialogue: 0,%s,%s,%s,,0000,0000,0000,,{\\pos(%d,%d)}%s\r\n",
@@ -1286,10 +1291,29 @@ static void dumparib(decoder_t *p_dec,mtime_t i_pts)
         free(pts);
     }
 
+#ifdef ADD_HLC_SUPPORT
+    if (p_sys->arib_decoder.p_hlcregion) {
+        arib_buf_region_t *p_region = p_dec->p_sys->arib_decoder.p_region;
+        while(p_region) {
+            if (p_region->p_next == NULL) break;
+            p_region = p_region->p_next;
+        }
+        // insert tail
+        p_region->p_next = p_sys->arib_decoder.p_hlcregion;
+    }
+#endif
     if (p_sys->arib_decoder.p_region) {
         pushregion(p_dec,i_pts,i_stop);
     }
+
     arib_finalize_decoder(&p_sys->arib_decoder);
+
+#ifdef ADD_HLC_SUPPORT
+    if (p_sys->arib_decoder.p_hlcregion) {
+	    free(p_sys->arib_decoder.p_hlcbuf);
+    }
+#endif
+
     p_sys->i_drcs_num = 0;
 
     if (tostr) free(tostr);
