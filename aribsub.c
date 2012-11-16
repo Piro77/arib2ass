@@ -601,6 +601,9 @@ static void save_drcs_pattern(
     drcs_conversion_t *p_drcs_conv;
     bool found;
 
+/* XXX broken data ? */
+if (i_height == 0 || i_width == 0) return;
+
     char* psz_hash = get_drcs_pattern_data_hash( p_dec,
             i_width, i_height, i_depth, p_patternData );
 
