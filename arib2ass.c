@@ -626,7 +626,7 @@ int main(int i_argc, char* pa_argv[])
                 dvbpsi_PushPacket(p_stream->pmt.handle, p_tmp);
 
             /* Remember PID */
-            if(( !p_stream->pid[i_pid].b_seen ) && (p_stream->pmt.pid_pmt))
+            if(( !p_stream->pid[i_pid].b_seen ) && (p_stream->pmt.pid_pcr))
             {
                 p_stream->pid[i_pid].b_seen = VLC_TRUE;
                 p_stream->pid[i_pid].i_cc = 0xff;
