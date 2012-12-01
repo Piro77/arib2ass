@@ -687,7 +687,8 @@ int main(int i_argc, char* pa_argv[])
                 }
             }
             mtime_t i_pcr = GetPCR( p_tmp );
-            if( i_pcr >= 0 )
+            /* XXX need check PCR_PID == i_pid ?? */
+            if( i_pcr >= 0  && (p_stream->pmt.pid_pcr))
             {
                 if (p_stream->i_pid_ref_pcr == -1) {
                     p_stream->i_pid_ref_pcr = i_pid;
