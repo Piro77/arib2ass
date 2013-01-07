@@ -84,7 +84,8 @@ struct decoder_sys_t
 typedef struct ass_region_buf_s
 {
     char    *p_buf;
-    bool    b_ephemer;
+    unsigned char    f_blink;
+    mtime_t i_start;
     struct ass_region_buf_s *p_next;
 }ass_region_buf_t;
 
@@ -99,7 +100,7 @@ static void parse_data_group( decoder_t * );
 static void parse_arib_pes( decoder_t * );
 static bool isallspace(char *,int);
 static void dumpheader(decoder_t *);
-static void dumpregion(decoder_t *,ass_region_buf_t *,char *);
+static void dumpregion(decoder_t *,ass_region_buf_t *,mtime_t);
 static void pushregion(decoder_t *,mtime_t,mtime_t);
 static void dumparib(decoder_t *,mtime_t);
 static void free_all(decoder_t *);
@@ -1117,23 +1118,46 @@ static void dumpheader(decoder_t *p_dec)
     }
     fclose( fp );
 }
-static void dumpregion(decoder_t *p_dec,ass_region_buf_t *ass,char *p_stop)
+static void dumpregion(decoder_t *p_dec,ass_region_buf_t *ass,mtime_t i_stop)
 {
     decoder_sys_t *p_sys = p_dec->p_sys;
     static bool dumpstart = true;
-    char *p2;
+    char *p2,*p3;
+    char *p_start,*p_stop,*pb_start,*pb_stop;
+    mtime_t i,i_dur,i_int,i_off;
+    i_int = 135000; // ブリンク間隔(1.5秒)
+    i_dur = i_int / 2;  //表示時間
     if (dumpstart) {
         dumpheader(p_dec);
         dumpstart=false;
     }
+    p_start =dumpts(ass->i_start);
+    p_stop = dumpts(i_stop);
     for(ass_region_buf_t *p = ass;p;p = p->p_next) {
-        if (p->b_ephemer) {
-            asprintf(&p2,p->p_buf,p_stop);
-            fprintf(p_sys->outputfp, "%s",p2);
-            free(p2);
+        if (p->f_blink > 0) {
+            // f_blink = 2 の場合消灯からスタート
+            if (p->f_blink == 1) i_off = 0;
+            else i_off = i_dur;
+            //表示を複数回に分けてBLINKするように見せかける
+            for(i=ass->i_start;i<i_stop-i_off;i=i+i_int) {
+                pb_start = dumpts(i+i_off);
+                if (i_stop < i+i_dur+i_off) {
+                    pb_stop = dumpts(i_stop);
+                }
+                else {
+                    pb_stop  = dumpts(i+i_dur+i_off);
+                }
+                asprintf(&p2,p->p_buf,pb_start,pb_stop);
+                fprintf(p_sys->outputfp, "%s",p2);
+                free(p2);
+                free(pb_start);
+                free(pb_stop);
+            }
         }
         else {
-            fprintf(p_sys->outputfp, "%s",p->p_buf);
+            asprintf(&p2,p->p_buf,p_start,p_stop);
+            fprintf(p_sys->outputfp, "%s",p2);
+            free(p2);
         }
         free(p->p_buf);
         //free(p);
@@ -1163,17 +1187,11 @@ static void pushregion(decoder_t  *p_dec,mtime_t i_start,mtime_t i_stop)
     arib_buf_region_t *p_region = p_dec->p_sys->arib_decoder.p_region;
     static ass_region_buf_t *ass=NULL;
     ass_region_buf_t *asstmp;
-    char *p1,*p2,*p3,*p4,*style;
+    char *p3,*p4,*style;
     char tmp[512];
-    p1 = dumpts(i_start);
-    if (i_start == i_stop) {
-        asprintf(&p2,"%s","%s");
-    }
-    else {
-        p2 = dumpts(i_stop);
-    }
+    mtime_t tswk;
     if (ass) {
-        dumpregion(p_dec,ass,p1);
+        dumpregion(p_dec,ass,i_start);
         free_assregion(ass);
         ass = NULL;
     }
@@ -1203,15 +1221,15 @@ static void pushregion(decoder_t  *p_dec,mtime_t i_start,mtime_t i_stop)
 	}
         if (p_buf_region->i_foreground_color == 0xffffff) {
             p4 = NULL;
-            asprintf(&p3,"Dialogue: 0,%s,%s,%s,,0000,0000,0000,,{\\pos(%d,%d)}%s\n",
-                    p1,p2,style,
+            asprintf(&p3,"Dialogue: 0,%%s,%%s,%s,,0000,0000,0000,,{\\pos(%d,%d)}%s\n",
+                    style,
                     p_buf_region->i_charleft - (p_buf_region->i_fontwidth + p_buf_region->i_horint) ,
                     p_buf_region->i_charbottom - (p_buf_region->i_fontheight + p_buf_region->i_verint),
                     tmp);
         }
         else {
-            asprintf(&p3,"Dialogue: 0,%s,%s,%s,,0000,0000,0000,,{\\pos(%d,%d)\\c&H%06x&}%s\n",
-                    p1,p2,style,
+            asprintf(&p3,"Dialogue: 0,%%s,%%s,%s,,0000,0000,0000,,{\\pos(%d,%d)\\c&H%06x&}%s\n",
+                    style,
                     p_buf_region->i_charleft - (p_buf_region->i_fontwidth + p_buf_region->i_horint) ,
                     p_buf_region->i_charbottom - (p_buf_region->i_fontheight + p_buf_region->i_verint),
                     p_buf_region->i_foreground_color,tmp);
@@ -1229,17 +1247,18 @@ static void pushregion(decoder_t  *p_dec,mtime_t i_start,mtime_t i_stop)
             asstmp = asstmp->p_next;
         }
         asstmp->p_buf = strdup(p3);
-        asstmp->b_ephemer = (i_start == i_stop);
+#ifdef ADD_FLC_SUPPORT
+        asstmp->f_blink = p_buf_region->i_blink;
+#endif
+        asstmp->i_start = i_start;
         free(p3);
         //if (p4) free(p4);
     }
     if (i_start != i_stop && ass) {
-        dumpregion(p_dec,ass,p2);
+        dumpregion(p_dec,ass,i_stop);
         free_assregion(ass);
         ass = NULL;
     }
-    free(p2);
-    free(p1);
 }
 static void dumparib(decoder_t *p_dec,mtime_t i_pts)
 {

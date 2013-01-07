@@ -141,6 +141,10 @@ typedef struct arib_buf_region_s
     int i_veradj;
     int i_horadj;
 
+#ifdef ADD_FLC_SUPPORT
+    int i_blink;
+#endif
+
     struct arib_buf_region_s *p_next;
 } arib_buf_region_t;
 
@@ -208,6 +212,9 @@ typedef struct arib_decoder_s
     char i_hlcstate;
     arib_buf_region_t *p_hlcregion;
     char *p_hlcbuf;
+#endif
+#ifdef ADD_HLC_SUPPORT
+    char i_flcstate;
 #endif
 
     arib_buf_region_t *p_region;
@@ -504,6 +511,9 @@ static int decoder_push( arib_decoder_t *decoder, unsigned int uc )
         p_region->i_veradj = i_veradj;
         p_region->i_horadj = i_horadj;
 
+#ifdef ADD_FLC_SUPPORT
+        p_region->i_blink = decoder->i_flcstate;
+#endif
         p_region->p_next = NULL;
 
         decoder->b_need_next_region = false;
@@ -545,6 +555,9 @@ static int decoder_push( arib_decoder_t *decoder, unsigned int uc )
         p_region->i_veradj = i_veradj;
         p_region->i_horadj = i_horadj;
 
+#ifdef ADD_FLC_SUPPORT
+        p_region->i_blink = decoder->i_flcstate;
+#endif
         p_region->p_next = NULL;
 
         decoder->b_need_next_region = false;
@@ -2055,6 +2068,9 @@ static int decoder_handle_c0( arib_decoder_t *decoder, int c )
         case 0x0c: //CS
             decoder->i_charleft = decoder->i_left;
             decoder->i_charbottom = decoder->i_top + decoder->i_charheight - 1;
+#ifdef ADD_FLC_SUPPORT
+            decoder->i_flcstate = 0;
+#endif
             decoder_adjust_position( decoder );
             return 1;
         case 0x0d: //APR
@@ -2178,8 +2194,19 @@ static int decoder_handle_flc( arib_decoder_t *decoder )
         switch( c )
         {
             case 0x40:
+#ifdef ADD_FLC_SUPPORT
+                decoder->i_flcstate = 1;
+                return 1;
+#endif
             case 0x47:
+#ifdef ADD_FLC_SUPPORT
+                decoder->i_flcstate = 2;
+                return 1;
+#endif
             case 0x4f:
+#ifdef ADD_FLC_SUPPORT
+                decoder->i_flcstate = 0;
+#endif
                 return 1;
             default:
                 return 0;
@@ -2366,6 +2393,9 @@ static int decoder_handle_csi( arib_decoder_t *decoder )
                     decoder->i_height = i_param2;
                     decoder->i_right = decoder->i_left + decoder->i_width;
                     decoder->i_bottom = decoder->i_top + decoder->i_height;
+#ifdef ADD_FLC_SUPPORT
+                    decoder->i_flcstate = 0;
+#endif
                 }
                 return 1;
             case 0x57: //SSM
@@ -2853,6 +2883,9 @@ static void arib_initialize_decoder( arib_decoder_t* decoder, bool b_caption )
     decoder->i_hlcstate = 0;
     decoder->p_hlcregion = NULL;
     decoder->p_hlcbuf = NULL;
+#endif
+#ifdef ADD_FLC_SUPPORT
+    decoder->i_flcstate = 0;
 #endif
 
     decoder->p_region = NULL;
