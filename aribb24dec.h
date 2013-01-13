@@ -28,6 +28,7 @@
 #define DEBUG_ARIBB24DEC 1
 
 #define ADD_HLC_SUPPORT 1
+#define ADD_FLC_SUPPORT 1
 
 #if 0
 /*****************************************************************************
@@ -211,7 +212,6 @@ typedef struct arib_decoder_s
 #ifdef ADD_HLC_SUPPORT
     char i_hlcstate;
     arib_buf_region_t *p_hlcregion;
-    char *p_hlcbuf;
 #endif
 #ifdef ADD_HLC_SUPPORT
     char i_flcstate;
@@ -300,21 +300,36 @@ static inline int u8_uctomb( unsigned char *s, unsigned int uc, int n )
 static int decoder_pushhlc( arib_decoder_t *decoder)
 {
     arib_buf_region_t *p_hlcregion = decoder->p_hlcregion;
+    arib_buf_region_t *p_next;
+    char *p_hlcbuf;
 
-    if ((decoder->i_hlcstate & 8) && (decoder->p_hlcregion == NULL))
+    if (decoder->p_hlcregion) {
+        while( (p_next = p_hlcregion->p_next) != NULL )
+        {
+            p_hlcregion = p_next;
+        }
+    }
+
+    if (decoder->i_hlcstate & 8)
     {
         //start HLC REGION
-        decoder->p_hlcregion = (arib_buf_region_t*) calloc( 1, sizeof(arib_buf_region_t) );
-        if( decoder->p_hlcregion == NULL )
-        {
-            return 0;
-        }
-        p_hlcregion = decoder->p_hlcregion;
+	if (decoder->p_hlcregion == NULL) {
+            decoder->p_hlcregion = (arib_buf_region_t*) calloc( 1, sizeof(arib_buf_region_t) );
+            if( decoder->p_hlcregion == NULL )
+            {
+                return 0;
+            }
+            p_hlcregion = decoder->p_hlcregion;
+	}
+	else {
+            p_hlcregion->p_next = (arib_buf_region_t*) calloc( 1, sizeof(arib_buf_region_t) );
+            p_hlcregion = p_hlcregion->p_next;
+	}
         p_hlcregion->i_charleft = decoder->i_charleft;
         p_hlcregion->i_charbottom = decoder->i_charbottom;
         p_hlcregion->i_foreground_color = 0xffffff;
     }
-    if ((decoder->i_hlcstate & 2) && (decoder->p_hlcregion != NULL) && (decoder->p_hlcbuf == NULL))
+    if ((decoder->i_hlcstate & 2) && (decoder->p_hlcregion != NULL))
     {
         //finish HLC REGION
 	int x,y,x2,y2,width,height;
@@ -325,14 +340,13 @@ static int decoder_pushhlc( arib_decoder_t *decoder)
 	width = x2 - x;
 	height  = y2 - y;
 	// {\p1} m 0 0 l 0 width width height 0 height {\p0}
-	asprintf(&decoder->p_hlcbuf,"{\\p1}m 0 0 l %d 0 %d -%d 0 -%d {\\p0}",
+	asprintf(&p_hlcbuf,"{\\p1}m 0 0 l %d 0 %d -%d 0 -%d {\\p0}",
 		width,width,height,height);
 	p_hlcregion->i_charleft =  p_hlcregion->i_charleft + (width / 2);
 	p_hlcregion->i_charbottom =  p_hlcregion->i_charbottom + height - (decoder->i_verint / 2);
-	p_hlcregion->p_start = decoder->p_hlcbuf;
-	p_hlcregion->p_end = decoder->p_hlcbuf + strlen(decoder->p_hlcbuf);
+	p_hlcregion->p_start = p_hlcbuf;
+	p_hlcregion->p_end = p_hlcbuf + strlen(p_hlcbuf);
     }
-
     return 1;
 }
 #endif
@@ -2882,7 +2896,6 @@ static void arib_initialize_decoder( arib_decoder_t* decoder, bool b_caption )
 #ifdef ADD_HLC_SUPPORT
     decoder->i_hlcstate = 0;
     decoder->p_hlcregion = NULL;
-    decoder->p_hlcbuf = NULL;
 #endif
 #ifdef ADD_FLC_SUPPORT
     decoder->i_flcstate = 0;

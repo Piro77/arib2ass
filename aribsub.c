@@ -1189,7 +1189,6 @@ static void pushregion(decoder_t  *p_dec,mtime_t i_start,mtime_t i_stop)
     ass_region_buf_t *asstmp;
     char *p3,*p4,*style;
     char tmp[512];
-    mtime_t tswk;
     if (ass) {
         dumpregion(p_dec,ass,i_start);
         free_assregion(ass);
@@ -1329,12 +1328,6 @@ static void dumparib(decoder_t *p_dec,mtime_t i_pts)
     }
 
     arib_finalize_decoder(&p_sys->arib_decoder);
-
-#ifdef ADD_HLC_SUPPORT
-    if (p_sys->arib_decoder.p_hlcregion) {
-	    free(p_sys->arib_decoder.p_hlcbuf);
-    }
-#endif
 
     p_sys->i_drcs_num = 0;
 
