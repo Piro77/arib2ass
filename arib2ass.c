@@ -395,6 +395,7 @@ static void DumpPMT(void* p_data, dvbpsi_pmt_t* p_pmt)
     p_stream->pmt.i_pmt_version = p_pmt->i_version;
     p_stream->pmt.pid_pcr = &p_stream->pid[p_pmt->i_pcr_pid];
     p_stream->pid[p_pmt->i_pcr_pid].b_pcr = VLC_TRUE;
+    p_stream->pid[p_pmt->i_pcr_pid].i_pid = p_pmt->i_pcr_pid;
 
 #if 0
     fprintf( stderr, "\n" );
@@ -687,8 +688,7 @@ int main(int i_argc, char* pa_argv[])
                 }
             }
             mtime_t i_pcr = GetPCR( p_tmp );
-            /* XXX need check PCR_PID == i_pid ?? */
-            if( i_pcr >= 0  && (p_stream->pmt.pid_pcr))
+            if( i_pcr >= 0  && (p_stream->pmt.pid_pcr) && (i_pid == p_stream->pmt.pid_pcr->i_pid))
             {
                 if (p_stream->i_pid_ref_pcr == -1) {
                     p_stream->i_pid_ref_pcr = i_pid;
