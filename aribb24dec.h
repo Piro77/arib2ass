@@ -30,6 +30,8 @@
 #define ADD_HLC_SUPPORT 1
 #define ADD_FLC_SUPPORT 1
 
+#define DRCS_HASH_TABLE_SIZE 10
+
 #if 0
 /*****************************************************************************
  * ARIB STD-B24 VOLUME 1 Part 3 Chapter 9.3.1 Caption management data
@@ -205,7 +207,8 @@ typedef struct arib_decoder_s
     int i_charbottom;
 
     int i_drcs_num;
-    char drcs_hash_table[10][32 + 1];
+    char drcs_hash_table[DRCS_HASH_TABLE_SIZE][32 + 1];
+    char drcs_hash_code[DRCS_HASH_TABLE_SIZE];
 
     drcs_conversion_t *p_drcs_conv;
 
@@ -611,7 +614,15 @@ static int decoder_pull( arib_decoder_t *decoder, int *c )
 
 static int decoder_handle_drcs( arib_decoder_t *decoder, int c )
 {
-    unsigned int uc;
+    unsigned int uc,i;
+
+    // Check DRCS code
+    for(i=0;i<DRCS_HASH_TABLE_SIZE;i++) {
+        if (c == decoder->drcs_hash_code[i]) {
+           c=i;
+           break;
+        }
+    }
 
     uc = 0;
     if( c < decoder->i_drcs_num )
@@ -637,6 +648,9 @@ static int decoder_handle_drcs( arib_decoder_t *decoder, int c )
         /* uc = 0x3000; */ /* WHITESPACE */
         /* uc = 0x25A1; */ /* WHITE SQUARE */
         uc = 0x3013; /* geta */
+#ifdef DEBUG_ARIBB24DEC
+        fprintf( stderr, "drcs hash[%s] c[%d] not converted\n", decoder->drcs_hash_table[c],c);
+#endif
     }
 
     return decoder_push( decoder, uc );

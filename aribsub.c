@@ -72,7 +72,8 @@ struct decoder_sys_t
 #endif //ARIBSUB_GEN_DRCS_DATA
 
     int               i_drcs_num;
-    char              drcs_hash_table[10][32 + 1];
+    char              drcs_hash_table[DRCS_HASH_TABLE_SIZE][32 + 1];
+    char              drcs_hash_code[DRCS_HASH_TABLE_SIZE];
 
     drcs_conversion_t *p_drcs_conv;
     char              *outputfile;
@@ -596,7 +597,7 @@ png_create_write_struct_failed:
 static void save_drcs_pattern(
         decoder_t *p_dec,
         int i_width, int i_height,
-        int i_depth, const int8_t* p_patternData )
+        int i_depth, const int8_t* p_patternData, uint16_t i_CharacterCode )
 {
     decoder_sys_t *p_sys = p_dec->p_sys;
     drcs_conversion_t *p_drcs_conv;
@@ -622,7 +623,7 @@ if (i_height == 0 || i_width == 0) return;
     }
     // already saved?
     if (!found) {
-        for(int i=0;i<10;i++) {
+        for(int i=0;i<DRCS_HASH_TABLE_SIZE;i++) {
             if (strcmp(p_sys->drcs_hash_table[i],psz_hash) == 0)
             {
                 found = true;
@@ -631,8 +632,11 @@ if (i_height == 0 || i_width == 0) return;
         }
     }
 
+
     strncpy( p_sys->drcs_hash_table[p_sys->i_drcs_num], psz_hash, 32 );
     p_sys->drcs_hash_table[p_sys->i_drcs_num][32] = '\0';
+    // XXX x4121??
+    p_sys->drcs_hash_code[p_sys->i_drcs_num] = i_CharacterCode - 0x4121;
 
     p_sys->i_drcs_num++;
 
@@ -807,10 +811,10 @@ static void parse_data_unit_DRCS( decoder_t *p_dec,
 
 #ifdef ARIBSUB_GEN_DRCS_DATA
                 save_drcs_pattern( p_dec, i_width, i_height, i_depth + 2,
-                        p_drcs_pattern_data->p_patternData );
+                        p_drcs_pattern_data->p_patternData, p_drcs_code->i_CharacterCode );
 #else
                 save_drcs_pattern( p_dec, i_width, i_height, i_depth + 2,
-                        p_patternData );
+                        p_patternData, p_drcs_code->i_CharacterCode );
                 free( p_patternData );
 #endif //ARIBSUB_GEN_DRCS_DATA
             }
@@ -1281,6 +1285,7 @@ static void dumparib(decoder_t *p_dec,mtime_t i_pts)
         strncpy( p_sys->arib_decoder.drcs_hash_table[i],
                 p_sys->drcs_hash_table[i], 32 );
         p_sys->arib_decoder.drcs_hash_table[i][32] = '\0';
+        p_sys->arib_decoder.drcs_hash_code[i] = p_sys->drcs_hash_code[i];
     }
     p_sys->arib_decoder.p_drcs_conv = p_sys->p_drcs_conv;
 
