@@ -326,7 +326,7 @@ static void DumpSystemClockDescriptor(dvbpsi_system_clock_dr_t* p_clock_descript
  *****************************************************************************/
 static void DumpStreamIdentifierDescriptor(dvbpsi_stream_identifier_dr_t* p_si_descriptor)
 {
-    fprintf( stderr, "Component tag: %d\n",
+    fprintf( stderr, "Component tag: 0x%x\n",
             p_si_descriptor->i_component_tag);
 }
 
@@ -411,6 +411,9 @@ static void DumpPMT(void* p_data, dvbpsi_pmt_t* p_pmt)
         if (p_es->i_type == 0x06) { //
             if (PMTEsHasComponentTag(p_es,0x30,0x37)) {
                 p_stream->pid[p_es->i_pid].p_es = p_es;
+                if (p_stream->pid[p_es->i_pid].b_seen && !p_stream->pid[p_es->i_pid].decoder) {
+                    p_stream->pid[p_es->i_pid].b_seen = VLC_FALSE;
+                }
             }
         }
 #if 0
@@ -495,7 +498,7 @@ char *getinputfilename()
 {
     return filename;
 }
-char *getdebugflg()
+int getdebugflg()
 {
     return debugflg;
 }
