@@ -532,18 +532,6 @@ static void printversion( char *name )
 static char *outputfilename = NULL;
 static char *filename = NULL;
 static int  debugflg = 0;
-char *getoutputfilename()
-{
-    return outputfilename;
-}
-char *getinputfilename()
-{
-    return filename;
-}
-int getdebugflg()
-{
-    return debugflg;
-}
 
 /*****************************************************************************
  * main
@@ -682,7 +670,7 @@ int main(int i_argc, char* pa_argv[])
                 if (p_stream->pid[i_pid].p_es) {
                     p_stream->pid[i_pid].p_block = calloc(1,sizeof(block_t));
                     p_stream->pid[i_pid].decoder = calloc(1,sizeof(decoder_t));
-                    dec_open(p_stream->pid[i_pid].decoder);
+                    dec_open(p_stream->pid[i_pid].decoder,filename,outputfilename,debugflg);
                     fprintf(stderr,"Target pid  0x%x PMT 0x%x \n",i_pid,p_stream->pmt.pid_pmt->i_pid);
                 }
             }

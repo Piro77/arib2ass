@@ -126,7 +126,7 @@ static void *Decode( void *dec, block_t **pp_block )
     dumparib(p_dec,p_block->i_pts);
 }
 
-void *dec_open(void *p_this)
+void *dec_open(void *p_this,char *input,char *output,int debugflg)
 {
     decoder_t     *p_dec = (decoder_t *) p_this;
     decoder_sys_t *p_sys;
@@ -147,9 +147,9 @@ void *dec_open(void *p_this)
 
     load_drcs_conversion_table( p_dec );
 
-    p_sys->outputfile = (char *)getoutputfilename();
-    p_sys->inputfile = (char *)getinputfilename();
-    if (getdebugflg())
+    p_sys->outputfile = output;
+    p_sys->inputfile = input;
+    if (debugflg)
     {
         char *debugfile;
         asprintf(&debugfile,"%s.asslog",p_sys->inputfile);
@@ -1302,8 +1302,7 @@ static void dumparib(decoder_t *p_dec,mtime_t i_pts)
         const unsigned char* start = (const unsigned char*)p_sys->psz_subtitle_data;
         const unsigned char* end = (const unsigned char*)p_sys->psz_subtitle_data + p_sys->i_subtitle_data_size;
         char *dumpdata,*pts,dumpwk[10];
-        dumpdata = malloc((p_sys->i_subtitle_data_size * 4)+1);
-        dumpdata[0]=NULL;
+        dumpdata = calloc(1,(p_sys->i_subtitle_data_size * 4)+1);
         while( start < end )
         {
             sprintf(dumpwk,"%02x ",*start++);

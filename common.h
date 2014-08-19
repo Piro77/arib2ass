@@ -80,5 +80,7 @@ static char * dumpts(mtime_t ts)
     return buf;
 }
 
+void *dec_open(void *,char *,char *,int);
+void *dec_close(void *);
 
 #endif
