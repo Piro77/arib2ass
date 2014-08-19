@@ -254,6 +254,11 @@ static void DumpPAT(void* p_data, dvbpsi_pat_t* p_pat)
 #endif
     while( p_program )
     {
+        if (p_program->i_number == 0) {
+            p_program = p_program->p_next;
+            continue;
+        }
+
         if (p_stream->pmt.handle)
         {
             dvbpsi_pmt_detach(p_stream->pmt.handle);
@@ -284,6 +289,8 @@ static void DumpPAT(void* p_data, dvbpsi_pat_t* p_pat)
                 p_program->i_number, p_program->i_pid, p_program->i_pid);
 #endif
         p_program = p_program->p_next;
+
+        break; // only first program
     }
 #if 0
     fprintf( stderr, "  active              : %d\n", p_pat->b_current_next);
