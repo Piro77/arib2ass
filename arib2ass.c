@@ -101,7 +101,7 @@ typedef bool vlc_bool_t;
 
 typedef struct
 {
-    dvbpsi_handle handle;
+    dvbpsi_t * handle;
 
     int i_pat_version;
     int i_ts_id;
@@ -127,7 +127,7 @@ typedef struct ts_pid_s
 
 typedef struct ts_pmt_s
 {
-    dvbpsi_handle handle;
+    dvbpsi_t * handle;
 
     int         i_number; /* i_number = 0 is actually a NIT */
     int         i_pmt_version;
@@ -212,6 +212,20 @@ static int ReadPacket( int i_fd, uint8_t* p_dst )
 static dvbpsi_descriptor_t *PMTEsFindDescriptor(dvbpsi_pmt_es_t *,int);
 static int PMTEsHasComponentTag( dvbpsi_pmt_es_t *, int, int );
 
+static void message(dvbpsi_t *handle, const dvbpsi_msg_level_t level, const char* msg)
+{
+    switch(level)
+    {
+        case DVBPSI_MSG_ERROR: fprintf(stderr, "Error: "); break;
+        case DVBPSI_MSG_WARN:  fprintf(stderr, "Warning: "); break;
+        case DVBPSI_MSG_DEBUG: fprintf(stderr, "Debug: "); break;
+        default: /* do nothing */
+            return;
+    }
+    fprintf(stderr, "%s\n", msg);
+}
+
+
 /*****************************************************************************
  * DumpPAT
  *****************************************************************************/
@@ -219,6 +233,14 @@ static void DumpPAT(void* p_data, dvbpsi_pat_t* p_pat)
 {
     dvbpsi_pat_program_t* p_program = p_pat->p_first_program;
     ts_stream_t* p_stream = (ts_stream_t*) p_data;
+
+    if (p_stream->pmt.handle)
+    {
+        fprintf(stderr, "freeing old PMT\n");
+        dvbpsi_pmt_detach(p_stream->pmt.handle);
+        dvbpsi_delete(p_stream->pmt.handle);
+        p_stream->pmt.handle = NULL;
+    }
 
     p_stream->pat.i_pat_version = p_pat->i_version;
     p_stream->pat.i_ts_id = p_pat->i_ts_id;
@@ -232,29 +254,42 @@ static void DumpPAT(void* p_data, dvbpsi_pat_t* p_pat)
 #endif
     while( p_program )
     {
-        if (p_program->i_number == 0) {
-            p_program = p_program->p_next;
-            continue;
+        if (p_stream->pmt.handle)
+        {
+            dvbpsi_pmt_detach(p_stream->pmt.handle);
+            dvbpsi_delete(p_stream->pmt.handle);
+            p_stream->pmt.handle = NULL;
         }
 
         p_stream->i_pmt++;
         p_stream->pmt.i_number = p_program->i_number;
         p_stream->pmt.pid_pmt = &p_stream->pid[p_program->i_pid];
         p_stream->pmt.pid_pmt->i_pid = p_program->i_pid;
-        p_stream->pmt.handle = dvbpsi_AttachPMT( p_program->i_number, DumpPMT, p_stream );
+        p_stream->pmt.handle = dvbpsi_new(&message, DVBPSI_MSG_ERROR);
+
+        if (p_stream->pmt.handle == NULL)
+        {
+            fprintf(stderr, "could not allocate new dvbpsi_t handle\n");
+            break;
+        }
+        if (!dvbpsi_pmt_attach(p_stream->pmt.handle, p_program->i_number, DumpPMT, p_stream ))
+        {
+            dvbpsi_delete(p_stream->pmt.handle);
+            fprintf(stderr, "could not attach PMT\n");
+            break;
+        }
 
 #if 0
         fprintf( stderr, "    | %14d @ 0x%x (%d)\n",
                 p_program->i_number, p_program->i_pid, p_program->i_pid);
 #endif
         p_program = p_program->p_next;
-
-        break; // only first program
     }
 #if 0
     fprintf( stderr, "  active              : %d\n", p_pat->b_current_next);
 #endif
-    dvbpsi_DeletePAT(p_pat);
+    dvbpsi_pat_delete(p_pat);
+
 }
 
 /*****************************************************************************
@@ -423,7 +458,7 @@ static void DumpPMT(void* p_data, dvbpsi_pmt_t* p_pmt)
 #endif
         p_es = p_es->p_next;
     }
-    dvbpsi_DeletePMT(p_pmt);
+    dvbpsi_pmt_delete(p_pmt);
 }
 
 static mtime_t AdjustPCRWrapAround( ts_stream_t *p_stream, mtime_t i_pcr )
@@ -599,8 +634,14 @@ int main(int i_argc, char* pa_argv[])
     if( filename )
         i_len = ReadPacket( i_fd, p_data );
 
+    p_stream->pat.handle = dvbpsi_new(&message, DVBPSI_MSG_ERROR);
+    if (p_stream->pat.handle == NULL)
+        i_len = -1;
+    if (!dvbpsi_pat_attach(p_stream->pat.handle, DumpPAT, p_stream))
+        i_len = -1;
+
+
     /* Enter infinite loop */
-    p_stream->pat.handle = dvbpsi_AttachPAT( DumpPAT, p_stream );
     while( i_len > 0 )
     {
         vlc_bool_t b_first = VLC_FALSE;
@@ -617,17 +658,14 @@ int main(int i_argc, char* pa_argv[])
             vlc_bool_t b_payload = (p_tmp[3] & 0x10);
             vlc_bool_t b_unit_start = p_tmp[1]&0x40;
 
-
             /* Get the PID */
             ts_pid_t *p_pid = &p_stream->pid[ ((p_tmp[i+1]&0x1f)<<8)|p_tmp[i+2] ];
 
-
-
-
             if( i_pid == 0x0 )
-                dvbpsi_PushPacket(p_stream->pat.handle, p_tmp);
+                dvbpsi_packet_push(p_stream->pat.handle, p_tmp);
             else if( p_stream->pmt.pid_pmt && i_pid == p_stream->pmt.pid_pmt->i_pid )
-                dvbpsi_PushPacket(p_stream->pmt.handle, p_tmp);
+                dvbpsi_packet_push(p_stream->pmt.handle, p_tmp);
+
 
             /* Remember PID */
             if(( !p_stream->pid[i_pid].b_seen ) && (p_stream->pmt.pid_pcr))
@@ -818,10 +856,18 @@ int main(int i_argc, char* pa_argv[])
 
         i_len = ReadPacket( i_fd, p_data );
     }
+
     if( p_stream->pmt.handle )
-        dvbpsi_DetachPMT( p_stream->pmt.handle );
+    {
+        dvbpsi_pmt_detach( p_stream->pmt.handle );
+        dvbpsi_delete( p_stream->pmt.handle );
+    }
     if( p_stream->pat.handle )
-        dvbpsi_DetachPAT( p_stream->pat.handle );
+    {
+        dvbpsi_pat_detach( p_stream->pat.handle );
+        dvbpsi_delete( p_stream->pat.handle );
+    }
+
 
     /* clean up */
     if( filename )
