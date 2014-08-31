@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.68])
-AC_INIT([arib2ass], [0.1.0], [piro77@gmail.com])
+AC_INIT([arib2ass], [0.2.0], [piro77@gmail.com])
 AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
 AM_INIT_AUTOMAKE([foreign])
@@ -18,25 +18,11 @@ AC_PROG_CXX
 #AM_PROG_GCJ
 #AM_PROG_UPC
 
-case "${host_os}" in
-    freebsd*)
-     CFLAGS_save="${CFLAGS} -I/usr/local/include"
-     CFLAGS="${CFLAGS_save}"
-     LDFLAGS_save="${LDFLAGS} -L/usr/local/lib"
-     LDFLAGS="${LDFLAGS_save}"
-     ;;
-esac
-
-
-AM_ICONV
-# checks for libraries.
-# FIXME: Replace `main' with a function in `-ldvbpsi':
-AC_CHECK_LIB([dvbpsi], [main],,AC_MSG_ERROR(libdvbpsi required but not found))
+PKG_PROG_PKG_CONFIG()
+PKG_CHECK_MODULES(dvbpsi,libdvbpsi >= 1.0.0)
+PKG_CHECK_MODULES(png,libpng)
 # FIXME: Replace `main' with a function in `-lm':
 AC_CHECK_LIB([m], [main])
-# FIXME: Replace `main' with a function in `-lpng':
-AC_CHECK_LIB([png], [main],,AC_MSG_ERROR(libpng required but not found))
-
 
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h inttypes.h limits.h stdint.h stdlib.h string.h sys/time.h unistd.h])
