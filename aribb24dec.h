@@ -1950,8 +1950,8 @@ static int decoder_handle_esc( arib_decoder_t *decoder )
     state_drcs = 0;
     while( decoder_pull( decoder, &c ) != 0 )
     {
-        if (state_drcs == 1 && (c == 0x42 || c == 0x70 || c == 0x4a)) {
-            // DRCS(1b 2x 20)に続く 0x42,0x4a,0x70はhandle_drcsを強制
+        if (state_drcs == 1 && (c == 0x42 || c == 0x4a)) {
+            // DRCS(1b 2x 20)に続く 0x42,0x4aはhandle_drcsを強制
             *handle = decoder_handle_drcs;
             return 1;
         }
